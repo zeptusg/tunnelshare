@@ -8,3 +8,4 @@
 - Env access only through `src/lib/config.ts` (no `process.env` scattered).
 - Before claiming done: run `pnpm lint` and ensure `pnpm dev` runs.
 - Summarize: what changed, how to test, next step.
+- Always use @/ import alias. Never use relative ../../../ paths.
