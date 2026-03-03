@@ -1,5 +1,8 @@
 import { NextResponse } from "next/server";
 import { getJson, setJson } from "@/lib/redis";
+
+export const dynamic = "force-dynamic";
+
 export async function GET() {
     try {
         // simple sanity check: set a temp key and read it back
