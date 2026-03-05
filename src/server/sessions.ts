@@ -15,6 +15,11 @@ const createSessionParamsSchema = z.object({
 });
 type CreateSessionParams = z.input<typeof createSessionParamsSchema>;
 
+const createReadyTextSessionParamsSchema = createSessionParamsSchema.extend({
+  text: z.string(),
+});
+type CreateReadyTextSessionParams = z.input<typeof createReadyTextSessionParamsSchema>;
+
 /**
  * Create a new session object. Does not persist anywhere; just shapes the domain data.
  */
@@ -30,6 +35,22 @@ export function createSession(
     type,
     status: "CREATED",
     payload: null,
+    expiresAt: expires.toISOString(),
+  });
+}
+
+export function createReadyTextSession(
+  params: CreateReadyTextSessionParams
+): Session {
+  const { code, type = "text", ttlSeconds, text, now = new Date() } =
+    createReadyTextSessionParamsSchema.parse(params);
+  const expires = new Date(now.getTime() + ttlSeconds * 1000);
+
+  return sessionSchema.parse({
+    code,
+    type,
+    status: "READY",
+    payload: text,
     expiresAt: expires.toISOString(),
   });
 }
