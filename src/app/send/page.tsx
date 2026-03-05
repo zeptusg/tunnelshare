@@ -23,6 +23,7 @@ function isCreateSessionResponse(value: unknown): value is CreateSessionResponse
 
 export default function SendPage() {
   const [session, setSession] = useState<CreateSessionResponse | null>(null);
+  const [copied, setCopied] = useState(false);
 
   async function createSession(): Promise<void> {
     try {
@@ -34,9 +35,24 @@ export default function SendPage() {
 
       if (isCreateSessionResponse(data)) {
         setSession(data);
+        setCopied(false);
       }
     } catch (error) {
       console.error("Create session request failed:", error);
+    }
+  }
+
+  async function copyCode(): Promise<void> {
+    if (!session) {
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(session.code);
+      setCopied(true);
+    } catch (error) {
+      console.error("Copy code failed:", error);
+      setCopied(false);
     }
   }
 
@@ -63,9 +79,24 @@ export default function SendPage() {
           {session ? (
             <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-4">
               <p className="text-center text-3xl font-bold tracking-wide text-zinc-900">{session.code}</p>
+
+              <div className="mt-3 flex items-center justify-center gap-3">
+                <button
+                  type="button"
+                  onClick={copyCode}
+                  className="rounded-lg border border-zinc-300 bg-white px-3 py-1.5 text-sm font-medium text-zinc-900 transition hover:bg-zinc-100"
+                >
+                  Copy code
+                </button>
+                {copied ? <span className="text-xs text-emerald-700">Copied</span> : null}
+              </div>
+
+              <div className="mt-4 rounded-xl border-2 border-dashed border-zinc-300 bg-white p-6 text-center text-sm text-zinc-500">
+                QR placeholder
+              </div>
               <a
                 href={session.receiveUrl}
-                className="mt-3 block break-all text-center text-sm font-medium text-blue-700 underline"
+                className="mt-2 block break-all text-center text-sm font-medium text-blue-700 underline"
                 target="_blank"
                 rel="noopener noreferrer"
               >
