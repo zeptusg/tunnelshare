@@ -32,7 +32,12 @@ function getSessionKey(code: string): string {
 
 export async function POST(request: Request): Promise<NextResponse<CreateSessionResponse | { error: string }>> {
   try {
-    const body: unknown = await request.json();
+    let body: unknown;
+    try {
+      body = await request.json();
+    } catch {
+      return NextResponse.json({ error: "invalid_request" }, { status: 400 });
+    }
     const requestResult = createSessionRequestSchema.safeParse(body);
     if (!requestResult.success) {
       return NextResponse.json({ error: "invalid_request" }, { status: 400 });
@@ -41,13 +46,11 @@ export async function POST(request: Request): Promise<NextResponse<CreateSession
     const code = generateCode();
     const session = createReadyTextSession({
       code,
-      type: "text",
       ttlSeconds: config.sessionTtlSeconds,
       text: requestResult.data.text,
     });
-    const storedSession = { ...session, payloadType: "text" as const };
 
-    await setJson(getSessionKey(code), storedSession, config.sessionTtlSeconds);
+    await setJson(getSessionKey(code), session, config.sessionTtlSeconds);
 
     const receiveUrl = new URL("/receive", config.appUrl);
     receiveUrl.searchParams.set("code", code);

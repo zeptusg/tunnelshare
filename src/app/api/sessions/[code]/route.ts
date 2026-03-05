@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getJson } from "@/lib/redis";
-import { Session, sessionSchema } from "@/lib/types";
+import { PublicSession, Session, sessionSchema } from "@/lib/types";
 import { isExpired, toPublicSession } from "@/server/sessions";
 
 const SESSION_KEY_PREFIX = "session:";
@@ -20,7 +20,7 @@ function getSessionKey(code: string): string {
 export async function GET(
   _request: Request,
   context: { params: Promise<{ code: string }> }
-): Promise<NextResponse> {
+): Promise<NextResponse<PublicSession | { error: string }>> {
   try {
     const { code: rawCode } = await context.params;
     const codeResult = normalizedCodeSchema.safeParse(rawCode);
@@ -39,7 +39,7 @@ export async function GET(
       return NextResponse.json(NOT_FOUND_RESPONSE, { status: 404 });
     }
 
-    return NextResponse.json(toPublicSession(sessionResult.data));
+    return NextResponse.json<PublicSession>(toPublicSession(sessionResult.data));
   } catch (error) {
     console.error("Failed to fetch session", error);
     return NextResponse.json({ error: "internal_error" }, { status: 500 });

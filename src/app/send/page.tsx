@@ -22,13 +22,23 @@ function isCreateSessionResponse(value: unknown): value is CreateSessionResponse
 }
 
 export default function SendPage() {
+  const [text, setText] = useState("");
   const [session, setSession] = useState<CreateSessionResponse | null>(null);
   const [copied, setCopied] = useState(false);
 
   async function createSession(): Promise<void> {
+    const normalizedText = text.trim();
+    if (!normalizedText) {
+      return;
+    }
+
     try {
       const response = await fetch("/api/sessions", {
         method: "POST",
+        headers: {
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({ text: normalizedText }),
       });
       const data: unknown = await response.json();
       console.log("Create session response:", data);
@@ -63,6 +73,8 @@ export default function SendPage() {
 
         <div className="mt-6 space-y-4">
           <textarea
+            value={text}
+            onChange={(event) => setText(event.target.value)}
             className="min-h-40 w-full rounded-xl border border-zinc-300 px-4 py-3 text-zinc-900 outline-none transition focus:border-zinc-400 focus:ring-2 focus:ring-zinc-200"
             placeholder="Type or paste your text here..."
             aria-label="Text to send"
@@ -72,6 +84,7 @@ export default function SendPage() {
             type="button"
             className="flex h-12 w-full items-center justify-center rounded-xl bg-zinc-900 text-base font-semibold text-white transition hover:bg-zinc-800"
             onClick={createSession}
+            disabled={!text.trim()}
           >
             Create Session
           </button>

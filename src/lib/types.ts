@@ -1,24 +1,25 @@
 import { z } from "zod";
 
-export const sessionTypeSchema = z.literal("text");
-export type SessionType = z.infer<typeof sessionTypeSchema>;
+export const sessionPayloadTypeSchema = z.enum(["text", "file"]);
+export type SessionPayloadType = z.infer<typeof sessionPayloadTypeSchema>;
 
-export const sessionStatusSchema = z.enum(["CREATED", "READY", "OPENED", "EXPIRED"]);
-export type SessionStatus = z.infer<typeof sessionStatusSchema>;
+export const sessionPayloadSchema = z.object({
+  type: sessionPayloadTypeSchema,
+  content: z.string(),
+  metadata: z.record(z.string(), z.unknown()).optional(),
+});
+export type SessionPayload = z.infer<typeof sessionPayloadSchema>;
 
 export const sessionSchema = z.object({
   code: z.string().min(1, "Session code cannot be empty"),
-  type: sessionTypeSchema,
-  status: sessionStatusSchema,
-  payload: z.string().nullable(),
+  payload: sessionPayloadSchema,
   expiresAt: z.string().datetime({ offset: true }),
 });
 export type Session = z.infer<typeof sessionSchema>;
 
 export const publicSessionSchema = sessionSchema.pick({
   code: true,
-  type: true,
-  status: true,
+  payload: true,
   expiresAt: true,
 });
 export type PublicSession = z.infer<typeof publicSessionSchema>;
