@@ -1,3 +1,17 @@
+"use client";
+
+async function createSession(): Promise<void> {
+  try {
+    const response = await fetch("/api/sessions", {
+      method: "POST",
+    });
+    const data: unknown = await response.json();
+    console.log("Create session response:", data);
+  } catch (error) {
+    console.error("Create session request failed:", error);
+  }
+}
+
 export default function SendPage() {
   return (
     <main className="flex min-h-screen items-center justify-center bg-zinc-100 px-4 py-8">
@@ -14,6 +28,7 @@ export default function SendPage() {
           <button
             type="button"
             className="flex h-12 w-full items-center justify-center rounded-xl bg-zinc-900 text-base font-semibold text-white transition hover:bg-zinc-800"
+            onClick={createSession}
           >
             Create Session
           </button>
