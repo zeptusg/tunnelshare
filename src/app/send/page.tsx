@@ -86,7 +86,7 @@ export default function SendPage() {
             onClick={createSession}
             disabled={!text.trim()}
           >
-            Create Session
+            Send
           </button>
 
           {session ? (
