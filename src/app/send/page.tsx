@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { QRCodeSVG } from "qrcode.react";
 
 type CreateSessionResponse = {
   code: string;
@@ -104,8 +105,8 @@ export default function SendPage() {
                 {copied ? <span className="text-xs text-emerald-700">Copied</span> : null}
               </div>
 
-              <div className="mt-4 rounded-xl border-2 border-dashed border-zinc-300 bg-white p-6 text-center text-sm text-zinc-500">
-                QR placeholder
+              <div className="mt-4 flex justify-center rounded-xl border border-zinc-200 bg-white p-4">
+                <QRCodeSVG value={session.receiveUrl} size={176} includeMargin />
               </div>
               <a
                 href={session.receiveUrl}
