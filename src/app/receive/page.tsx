@@ -1,11 +1,26 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 
 export default function ReceivePage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [codeInput, setCodeInput] = useState("");
+
+  useEffect(() => {
+    const queryCode = searchParams.get("code");
+    if (!queryCode) {
+      return;
+    }
+
+    const normalizedCode = queryCode.trim().toUpperCase();
+    if (!normalizedCode) {
+      return;
+    }
+
+    router.replace(`/receive/${normalizedCode}`);
+  }, [router, searchParams]);
 
   function handleReceiveClick(): void {
     const normalizedCode = codeInput.trim().toUpperCase();
