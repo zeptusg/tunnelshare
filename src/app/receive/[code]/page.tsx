@@ -102,16 +102,31 @@ export default function ReceiveCodePage() {
     <main className="flex min-h-screen items-center justify-center bg-zinc-100 px-4 py-8">
       <section className="w-full max-w-lg rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm sm:p-8">
         <h1 className="text-2xl font-bold text-zinc-900">Receive Text</h1>
+        <p className="mt-2 text-sm text-zinc-500">Code: {normalizedCode || "—"}</p>
 
         <div className="mt-6">
-          {state.status === "loading" ? <p className="text-zinc-600">Loading session...</p> : null}
+          {state.status === "loading" ? (
+            <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-4">
+              <div className="flex items-center gap-3">
+                <span className="inline-flex h-3 w-3 animate-pulse rounded-full bg-zinc-400" />
+                <p className="text-sm font-medium text-zinc-700">Loading session…</p>
+              </div>
+            </div>
+          ) : null}
 
-          {state.status === "error" ? <p className="text-red-700">{state.message}</p> : null}
+          {state.status === "error" ? (
+            <div className="rounded-xl border border-red-200 bg-red-50 p-4">
+              <p className="text-sm font-semibold text-red-800">Unable to open this session</p>
+              <p className="mt-1 text-sm text-red-700">{state.message}</p>
+            </div>
+          ) : null}
 
           {state.status === "ready" && state.session.payload.type === "text" ? (
-            <p className="whitespace-pre-wrap rounded-xl border border-zinc-200 bg-zinc-50 p-4 text-zinc-900">
-              {state.session.payload.content}
-            </p>
+            <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-4 sm:p-5">
+              <p className="whitespace-pre-wrap break-words text-base leading-7 text-zinc-900 sm:text-lg">
+                {state.session.payload.content}
+              </p>
+            </div>
           ) : null}
 
           {state.status === "ready" && state.session.payload.type !== "text" ? (
