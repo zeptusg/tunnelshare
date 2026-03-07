@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
 
@@ -68,7 +69,10 @@ export default function ReceiveCodePage() {
 
         if (response.status === 404) {
           if (!cancelled) {
-            setState({ status: "error", message: "Session not found or expired." });
+            setState({
+              status: "error",
+              message: "This session was not found or has expired. Ask the sender for a new code.",
+            });
           }
           return;
         }
@@ -116,8 +120,14 @@ export default function ReceiveCodePage() {
 
           {state.status === "error" ? (
             <div className="rounded-xl border border-red-200 bg-red-50 p-4">
-              <p className="text-sm font-semibold text-red-800">Unable to open this session</p>
+              <p className="text-sm font-semibold text-red-800">Session unavailable</p>
               <p className="mt-1 text-sm text-red-700">{state.message}</p>
+              <Link
+                href="/receive"
+                className="mt-3 inline-flex rounded-lg bg-zinc-900 px-3 py-2 text-sm font-medium text-white transition hover:bg-zinc-800"
+              >
+                Try another code
+              </Link>
             </div>
           ) : null}
 
