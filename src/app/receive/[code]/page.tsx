@@ -45,6 +45,7 @@ function isSessionResponse(value: unknown): value is SessionResponse {
 export default function ReceiveCodePage() {
   const params = useParams<{ code?: string }>();
   const [state, setState] = useState<PageState>({ status: "loading" });
+  const [copied, setCopied] = useState(false);
   const normalizedCode = useMemo(() => {
     const rawCode = params.code;
     if (typeof rawCode !== "string") {
@@ -87,6 +88,7 @@ export default function ReceiveCodePage() {
 
         if (!cancelled) {
           setState({ status: "ready", session: data });
+          setCopied(false);
         }
       } catch {
         if (!cancelled) {
@@ -101,6 +103,15 @@ export default function ReceiveCodePage() {
       cancelled = true;
     };
   }, [normalizedCode]);
+
+  async function copyText(content: string): Promise<void> {
+    try {
+      await navigator.clipboard.writeText(content);
+      setCopied(true);
+    } catch {
+      setCopied(false);
+    }
+  }
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-zinc-100 px-4 py-8">
@@ -136,6 +147,16 @@ export default function ReceiveCodePage() {
               <p className="whitespace-pre-wrap break-words text-base leading-7 text-zinc-900 sm:text-lg">
                 {state.session.payload.content}
               </p>
+              <div className="mt-4 flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => copyText(state.session.payload.content)}
+                  className="rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm font-medium text-zinc-900 transition hover:bg-zinc-100"
+                >
+                  Copy text
+                </button>
+                {copied ? <span className="text-xs text-emerald-700">Copied</span> : null}
+              </div>
             </div>
           ) : null}
 
