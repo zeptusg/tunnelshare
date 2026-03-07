@@ -24,6 +24,7 @@ function isCreateSessionResponse(value: unknown): value is CreateSessionResponse
 
 export default function SendPage() {
   const [text, setText] = useState("");
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [session, setSession] = useState<CreateSessionResponse | null>(null);
   const [copied, setCopied] = useState(false);
 
@@ -80,6 +81,19 @@ export default function SendPage() {
             placeholder="Type or paste your text here..."
             aria-label="Text to send"
           />
+
+          <div>
+            <input
+              type="file"
+              onChange={(event) => {
+                const nextFile = event.target.files?.[0] ?? null;
+                setSelectedFile(nextFile);
+              }}
+              className="block w-full text-sm text-zinc-700 file:mr-4 file:rounded-lg file:border-0 file:bg-zinc-900 file:px-3 file:py-2 file:text-sm file:font-medium file:text-white hover:file:bg-zinc-800"
+              aria-label="Select file"
+            />
+            {selectedFile ? <p className="mt-2 text-sm text-zinc-600">Selected file: {selectedFile.name}</p> : null}
+          </div>
 
           <button
             type="button"
