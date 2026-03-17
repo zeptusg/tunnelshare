@@ -40,3 +40,4 @@ Acceptance:
 
 Acceptance:
 - Receiver open first → sender posts text → receiver updates without refresh.
+
