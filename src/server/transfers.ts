@@ -125,11 +125,12 @@ export function isTransferExpired(
 }
 
 export function toPublicTransfer(transfer: Transfer): PublicTransfer {
-  const { code, status, payload, expiresAt } = transfer;
+  const { code, status, payload, sendUrl, expiresAt } = transfer;
   return publicTransferSchema.parse({
     code,
     status,
     payload,
+    sendUrl,
     expiresAt,
   });
 }

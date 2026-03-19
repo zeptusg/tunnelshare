@@ -57,6 +57,7 @@ export const publicTransferSchema = transferBaseSchema.pick({
   code: true,
   status: true,
   payload: true,
+  sendUrl: true,
   expiresAt: true,
 });
 export type PublicTransfer = z.infer<typeof publicTransferSchema>;

@@ -5,6 +5,8 @@ import type { PublicTransfer } from "@/lib/types";
 import { getStoredTransfer } from "@/server/transfer-store";
 import { isTransferExpired, toPublicTransfer } from "@/server/transfers";
 
+export const dynamic = "force-dynamic";
+
 const NOT_FOUND_RESPONSE = { error: "not_found" } as const;
 
 const normalizedCodeSchema = z

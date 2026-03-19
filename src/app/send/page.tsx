@@ -1,66 +1,112 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { QRCodeSVG } from "qrcode.react";
 
-type CreateSessionResponse = {
+type TransferActionResponse = {
   code: string;
+  status: "awaiting_payload" | "ready";
   receiveUrl: string;
   expiresAt: string;
 };
 
-function isCreateSessionResponse(value: unknown): value is CreateSessionResponse {
+function isTransferActionResponse(value: unknown): value is TransferActionResponse {
   if (typeof value !== "object" || value === null) {
     return false;
   }
 
-  const candidate = value as Partial<CreateSessionResponse>;
+  const candidate = value as Partial<TransferActionResponse>;
   return (
     typeof candidate.code === "string" &&
+    (candidate.status === "awaiting_payload" || candidate.status === "ready") &&
     typeof candidate.receiveUrl === "string" &&
     typeof candidate.expiresAt === "string"
   );
 }
 
-export default function SendPage() {
+function SendPageContent() {
+  const searchParams = useSearchParams();
   const [text, setText] = useState("");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [session, setSession] = useState<CreateSessionResponse | null>(null);
+  const [transfer, setTransfer] = useState<TransferActionResponse | null>(null);
   const [copied, setCopied] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [pending, setPending] = useState(false);
+  const requestedCode = searchParams.get("code")?.trim().toUpperCase() ?? "";
+  const isFulfillingTransfer = requestedCode.length > 0;
 
-  async function createSession(): Promise<void> {
+  useEffect(() => {
+    setTransfer(null);
+    setCopied(false);
+    setErrorMessage(null);
+  }, [requestedCode]);
+
+  async function submitTransfer(): Promise<void> {
     const normalizedText = text.trim();
     if (!normalizedText) {
       return;
     }
 
     try {
-      const response = await fetch("/api/sessions", {
-        method: "POST",
-        headers: {
-          "content-type": "application/json",
-        },
-        body: JSON.stringify({ text: normalizedText }),
-      });
-      const data: unknown = await response.json();
-      console.log("Create session response:", data);
+      setPending(true);
+      setErrorMessage(null);
+      const response = isFulfillingTransfer
+        ? await fetch(`/api/transfers/${requestedCode}/payload`, {
+            method: "POST",
+            headers: {
+              "content-type": "application/json",
+            },
+            body: JSON.stringify({
+              payload: {
+                type: "text",
+                content: normalizedText,
+              },
+            }),
+          })
+        : await fetch("/api/transfers", {
+            method: "POST",
+            headers: {
+              "content-type": "application/json",
+            },
+            body: JSON.stringify({
+              payload: {
+                type: "text",
+                content: normalizedText,
+              },
+            }),
+          });
 
-      if (isCreateSessionResponse(data)) {
-        setSession(data);
-        setCopied(false);
+      const data: unknown = await response.json();
+      console.log("Transfer action response:", data);
+
+      if (!response.ok) {
+        setErrorMessage("Failed to send transfer.");
+        return;
       }
+
+      if (isTransferActionResponse(data)) {
+        setTransfer(data);
+        setCopied(false);
+        return;
+      }
+
+      setErrorMessage("Invalid transfer response.");
     } catch (error) {
-      console.error("Create session request failed:", error);
+      console.error("Transfer request failed:", error);
+      setErrorMessage("Transfer request failed.");
+    } finally {
+      setPending(false);
     }
   }
 
   async function copyCode(): Promise<void> {
-    if (!session) {
+    if (!transfer) {
       return;
     }
 
     try {
-      await navigator.clipboard.writeText(session.code);
+      await navigator.clipboard.writeText(transfer.code);
       setCopied(true);
     } catch (error) {
       console.error("Copy code failed:", error);
@@ -71,7 +117,12 @@ export default function SendPage() {
   return (
     <main className="flex min-h-screen items-center justify-center bg-zinc-100 px-4 py-8">
       <section className="w-full max-w-lg rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm sm:p-8">
-        <h1 className="text-2xl font-bold text-zinc-900">Send Text</h1>
+        <h1 className="text-2xl font-bold text-zinc-900">
+          {isFulfillingTransfer ? "Send To Waiting Transfer" : "Send Text"}
+        </h1>
+        {isFulfillingTransfer ? (
+          <p className="mt-2 text-sm text-zinc-500">Transfer code: {requestedCode}</p>
+        ) : null}
 
         <div className="mt-6 space-y-4">
           <textarea
@@ -98,15 +149,22 @@ export default function SendPage() {
           <button
             type="button"
             className="flex h-12 w-full items-center justify-center rounded-xl bg-zinc-900 text-base font-semibold text-white transition hover:bg-zinc-800"
-            onClick={createSession}
-            disabled={!text.trim()}
+            onClick={submitTransfer}
+            disabled={!text.trim() || pending}
           >
-            Send
+            {pending ? "Sending..." : "Send"}
           </button>
 
-          {session ? (
+          {errorMessage ? (
+            <div className="rounded-xl border border-red-200 bg-red-50 p-4">
+              <p className="text-sm font-semibold text-red-800">Transfer failed</p>
+              <p className="mt-1 text-sm text-red-700">{errorMessage}</p>
+            </div>
+          ) : null}
+
+          {transfer ? (
             <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-4">
-              <p className="text-center text-3xl font-bold tracking-wide text-zinc-900">{session.code}</p>
+              <p className="text-center text-3xl font-bold tracking-wide text-zinc-900">{transfer.code}</p>
 
               <div className="mt-3 flex items-center justify-center gap-3">
                 <button
@@ -120,21 +178,29 @@ export default function SendPage() {
               </div>
 
               <div className="mt-4 flex justify-center rounded-xl border border-zinc-200 bg-white p-4">
-                <QRCodeSVG value={session.receiveUrl} size={176} includeMargin />
+                <QRCodeSVG value={transfer.receiveUrl} size={176} includeMargin />
               </div>
               <a
-                href={session.receiveUrl}
+                href={transfer.receiveUrl}
                 className="mt-2 block break-all text-center text-sm font-medium text-blue-700 underline"
                 target="_blank"
                 rel="noopener noreferrer"
               >
-                {session.receiveUrl}
+                {transfer.receiveUrl}
               </a>
-              <p className="mt-2 text-center text-xs text-zinc-500">Expires at: {session.expiresAt}</p>
+              <p className="mt-2 text-center text-xs text-zinc-500">Expires at: {transfer.expiresAt}</p>
             </div>
           ) : null}
         </div>
       </section>
     </main>
+  );
+}
+
+export default function SendPage() {
+  return (
+    <Suspense fallback={<main className="flex min-h-screen items-center justify-center bg-zinc-100 px-4 py-8" />}>
+      <SendPageContent />
+    </Suspense>
   );
 }
