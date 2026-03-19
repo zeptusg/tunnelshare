@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useEffect, useEffectEvent, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 type CreateTransferResponse = {
@@ -21,6 +21,7 @@ function ReceivePageContent() {
   const [codeInput, setCodeInput] = useState("");
   const [pending, setPending] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const startRequestHandledRef = useRef(false);
 
   useEffect(() => {
     const queryCode = searchParams.get("code");
@@ -77,10 +78,27 @@ function ReceivePageContent() {
     }
   }
 
+  const startReceiveTransferFromEffect = useEffectEvent(() => {
+    void startReceiveTransfer();
+  });
+
+  useEffect(() => {
+    const shouldStartRequest = searchParams.get("start") === "1";
+    if (!shouldStartRequest || startRequestHandledRef.current || pending) {
+      return;
+    }
+
+    startRequestHandledRef.current = true;
+    startReceiveTransferFromEffect();
+  }, [pending, searchParams]);
+
   return (
     <main className="flex min-h-screen items-center justify-center bg-zinc-100 px-4 py-8">
       <section className="w-full max-w-md rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm sm:p-8">
         <h1 className="text-2xl font-bold text-zinc-900">Receive Transfer</h1>
+        <p className="mt-2 text-sm leading-6 text-zinc-600">
+          Use an existing code if someone already shared one with you, or start a receive request to let another device send here.
+        </p>
 
         <div className="mt-6 space-y-4">
           <input
@@ -97,16 +115,16 @@ function ReceivePageContent() {
             onClick={handleReceiveClick}
             className="flex h-12 w-full items-center justify-center rounded-xl bg-zinc-900 text-base font-semibold text-white transition hover:bg-zinc-800"
           >
-            Open Transfer
+            Use existing code
           </button>
 
           <button
             type="button"
             onClick={startReceiveTransfer}
-            className="flex h-12 w-full items-center justify-center rounded-xl border border-zinc-300 bg-white text-base font-semibold text-zinc-900 transition hover:bg-zinc-50"
+            className="flex h-12 w-full items-center justify-center rounded-xl border border-emerald-200 bg-emerald-50 text-base font-semibold text-emerald-900 transition hover:bg-emerald-100"
             disabled={pending}
           >
-            {pending ? "Creating..." : "Create Receive Request"}
+            {pending ? "Creating..." : "Start receive request"}
           </button>
 
           {errorMessage ? (
