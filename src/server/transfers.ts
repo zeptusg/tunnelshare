@@ -1,11 +1,13 @@
 import { z } from "zod";
 import {
-  PublicTransfer,
-  Transfer,
-  TransferPayload,
   publicTransferSchema,
   transferPayloadSchema,
   transferSchema,
+} from "@/lib/types";
+import type {
+  PublicTransfer,
+  Transfer,
+  TransferPayload,
 } from "@/lib/types";
 
 const transferTimingParamsSchema = z.object({
