@@ -21,7 +21,7 @@ Follow these rules when working on this project.
 ## Architecture
 
 - **Business logic must not live in UI code.**
-- Session logic must live under:
+- Transfer and session logic must live under:
 
 src/server/
 
@@ -49,20 +49,36 @@ src/lib/config.ts
 
 - Do not use `process.env` directly in other files.
 
-## Session Rules
+## Transfer Rules
 
-- Sessions are **created only when the sender clicks Send**.
-- A valid session **always contains a payload**.
-- There is **no waiting state**.
+- A transfer can begin from either side:
+  - sender-first
+  - receiver-first
+- Payloads are created only when the sender clicks Send.
+- Waiting state is allowed only for transfer coordination, not for completed payload records.
+- Manual entry uses a short code. QR uses a server-issued URL.
+- A ready payload record must always contain a payload.
+- Transfer lifecycle and state transitions must be owned by server code.
 
-Session model:
+Transfer model:
 
 {
   code: string
-  payloadType: "text" | "file"
-  payload: string | fileReference
+  status: "awaiting_payload" | "ready" | "consumed" | "expired"
+  initiatedBy: "sender" | "receiver"
+  payloadType?: "text" | "file"
+  payload?: string | fileReference
+  receiveUrl: string
+  sendUrl?: string
   expiresAt: timestamp
 }
+
+Coordination rules:
+
+- Receiver-first flow may create a transfer in `awaiting_payload`.
+- Sender-first flow may create a transfer directly in `ready`.
+- UI must not infer transfer state; it must render server responses.
+- Any compatibility session record used during migration must be derived from the transfer state, not treated as the primary domain model.
 
 ## Quality Checks
 

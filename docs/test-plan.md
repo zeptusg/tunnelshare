@@ -3,9 +3,11 @@
 ## Scope (Current Milestone)
 ### In Scope
 - Home navigation (`/` -> Send/Receive)
-- Session creation from `/send`
-- Session retrieval via `/receive` and `/receive/[code]`
+- Sender-first transfer creation from `/send`
+- Receiver-first transfer creation from `/receive`
+- Transfer retrieval via QR URL and manual code entry
 - Code normalization and query redirect behavior
+- Transfer status transitions: `awaiting_payload` -> `ready`
 - TTL-based expiry handling
 - Redis health endpoint sanity check
 
@@ -28,14 +30,18 @@
 - 100% P0 pass
 - No open Sev-1/Sev-2 defects in scope
 - API contract checks passing
+- Sender-first and receiver-first paths both covered
 - Flake rate within agreed threshold
 
 ## Key Risks & Mitigations
 - **TTL timing instability:** run expiry tests in low-TTL controlled env.
 - **Brittle selectors:** enforce semantic locator usage.
 - **Environment drift:** use consistent env config for local/CI.
+- **Flow divergence:** assert both entry flows converge on the same ready-state retrieval behavior.
+- **QR/manual mismatch:** verify manual code entry and QR routes resolve the same transfer.
 
 ## Deliverables
+- `docs/transfer-architecture-spec.md`
 - `docs/test-strategy.md`
 - `docs/test-plan.md`
 - `docs/test-cases.md`
