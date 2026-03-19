@@ -8,6 +8,7 @@ Support both transfer entry flows as first-class behavior:
 - mobile to PC: receiver-first
 
 The domain model must support QR-based rendezvous without forcing every transfer to start with a payload.
+The same model must also support text now and file collections later, so single-file and multi-file sharing do not require another domain rewrite.
 
 ## Domain Model
 
@@ -21,8 +22,8 @@ type Transfer = {
   status: TransferStatus;
   initiatedBy: "sender" | "receiver";
   payload?: {
-    type: "text" | "file";
-    content: string;
+    type: "text" | "files";
+    content: string | FileReference[];
     metadata?: Record<string, unknown>;
   };
   receiveUrl: string;
@@ -37,6 +38,7 @@ Rules:
 - `ready` is valid only when `payload` is present.
 - `consumed` and `expired` are terminal states.
 - A code is the human fallback identifier, not the full QR contract.
+- File payloads should use `FileReference[]`, even when exactly one file is shared.
 
 ## Flow Semantics
 
@@ -54,6 +56,7 @@ Rules:
 3. Server returns `code`, `sendUrl`, and `expiresAt`.
 4. Sender opens the QR URL and submits payload.
 5. Server moves the transfer to `ready`.
+6. Receiver polls for state changes until the transfer is `ready`, `expired`, or invalid.
 
 ## API Direction
 
@@ -66,6 +69,13 @@ Target route shape:
   - returns transfer status and public payload data when ready
 - `POST /api/transfers/{code}/payload`
   - attaches payload to an `awaiting_payload` transfer
+
+Transport policy:
+
+- Initial implementation uses polling for waiting transfers.
+- SSE can be added later for server-to-client updates.
+- WebSockets are optional and should only be introduced if bidirectional coordination is actually needed.
+- Transport choice must not change transfer state rules or payload shape.
 
 Migration note:
 
@@ -85,6 +95,7 @@ Migration note:
 - Validation happens at API boundaries with Zod.
 - Transfer lifecycle logic lives in `src/server/`.
 - UI pages only submit inputs, poll APIs, and render returned state.
+- File storage metadata and file reference resolution also belong to server-side transfer logic.
 
 ## Non-Goals
 

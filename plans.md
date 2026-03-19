@@ -7,6 +7,8 @@ Goal: move from sender-only sessions to a transfer model that supports both entr
   - `src/server/*` for transfer lifecycle and domain logic
 - Add env config + `.env.example`
 - Define Transfer domain model and status rules
+- Define transport policy: polling first, SSE/WebSockets later without changing transfer state semantics
+- Define file payload model as a file collection shape that can represent one or many files
 - Create Redis client wrapper (TTL support)
 
 Acceptance:
@@ -49,17 +51,29 @@ Acceptance:
   - ready
   - expired
   - invalid
+- Waiting clients poll while transfer is `awaiting_payload`
 
 Acceptance:
 - Both entry flows converge on the same `ready` retrieval path.
 - Receiver can retrieve payload reliably by QR or manual code.
+- Polling behavior is explicit and testable.
 
-## M4 — Compatibility And Hardening
+## M4 — File Payload Evolution
+- Extend transfer payload schema from text-only to support file collections
+- Use the same transfer lifecycle for single-file and multi-file payloads
+- Keep file metadata/reference storage separate from UI concerns
+
+Acceptance:
+- File transfer can be added without redesigning the transfer state machine.
+- A single file is represented as a one-item file collection.
+
+## M5 — Compatibility And Hardening
 - Keep `/api/sessions` compatibility only as long as the UI still depends on it
 - Normalize code handling across transfer routes
 - Cover both flows in e2e tests
-- Decide whether polling is sufficient or whether push updates are needed
+- Add SSE or WebSocket transport only if polling becomes insufficient
 
 Acceptance:
 - Old session routes are either removed or explicitly documented as compatibility paths.
 - Dual-flow coverage exists in automated tests.
+- Push transport, if added, reuses the same transfer state transitions.

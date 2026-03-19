@@ -59,6 +59,9 @@ src/lib/config.ts
 - Manual entry uses a short code. QR uses a server-issued URL.
 - A ready payload record must always contain a payload.
 - Transfer lifecycle and state transitions must be owned by server code.
+- Polling is the default coordination mechanism for `awaiting_payload`.
+- SSE or WebSockets may be added later, but must layer on top of the same transfer state model.
+- File transfer must be modeled to support one or many files without changing the core transfer shape later.
 
 Transfer model:
 
@@ -66,8 +69,8 @@ Transfer model:
   code: string
   status: "awaiting_payload" | "ready" | "consumed" | "expired"
   initiatedBy: "sender" | "receiver"
-  payloadType?: "text" | "file"
-  payload?: string | fileReference
+  payloadType?: "text" | "files"
+  payload?: string | fileReference[]
   receiveUrl: string
   sendUrl?: string
   expiresAt: timestamp
@@ -78,6 +81,7 @@ Coordination rules:
 - Receiver-first flow may create a transfer in `awaiting_payload`.
 - Sender-first flow may create a transfer directly in `ready`.
 - UI must not infer transfer state; it must render server responses.
+- Clients should poll transfer status while waiting. Push transport is an optimization, not a separate state model.
 - Any compatibility session record used during migration must be derived from the transfer state, not treated as the primary domain model.
 
 ## Quality Checks

@@ -8,11 +8,13 @@
 - Transfer retrieval via QR URL and manual code entry
 - Code normalization and query redirect behavior
 - Transfer status transitions: `awaiting_payload` -> `ready`
+- Polling behavior while transfer is `awaiting_payload`
 - TTL-based expiry handling
 - Redis health endpoint sanity check
 
 ### Out of Scope
-- Real file transfer behavior
+- Real file byte transfer behavior
+- SSE/WebSocket transport
 - Auth/encryption/device pairing features
 - Native mobile wrappers
 
@@ -39,6 +41,8 @@
 - **Environment drift:** use consistent env config for local/CI.
 - **Flow divergence:** assert both entry flows converge on the same ready-state retrieval behavior.
 - **QR/manual mismatch:** verify manual code entry and QR routes resolve the same transfer.
+- **Polling regressions:** assert waiting clients update correctly without requiring manual refresh.
+- **Future file shape churn:** lock the domain contract around file collections before file upload work begins.
 
 ## Deliverables
 - `docs/transfer-architecture-spec.md`
