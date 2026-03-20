@@ -22,6 +22,7 @@ function ReceivePageContent() {
   const [pending, setPending] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const startRequestHandledRef = useRef(false);
+  const shouldStartRequest = searchParams.get("start") === "1";
 
   useEffect(() => {
     const queryCode = searchParams.get("code");
@@ -89,14 +90,38 @@ function ReceivePageContent() {
   });
 
   useEffect(() => {
-    const shouldStartRequest = searchParams.get("start") === "1";
     if (!shouldStartRequest || startRequestHandledRef.current || pending) {
       return;
     }
 
     startRequestHandledRef.current = true;
     startReceiveTransferFromEffect();
-  }, [pending, searchParams]);
+  }, [pending, shouldStartRequest]);
+
+  if (shouldStartRequest) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-zinc-100 px-4 py-8">
+        <section className="w-full max-w-md rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm sm:p-8">
+          <h1 className="text-2xl font-bold text-zinc-900">Starting Receive Request</h1>
+          <div className="mt-6 rounded-xl border border-zinc-200 bg-zinc-50 p-4">
+            <div className="flex items-center gap-3">
+              <span className="inline-flex h-3 w-3 animate-pulse rounded-full bg-emerald-500" />
+              <p className="text-sm font-medium text-zinc-700">
+                Preparing this device to receive a transfer...
+              </p>
+            </div>
+          </div>
+
+          {errorMessage ? (
+            <div className="mt-4 rounded-xl border border-red-200 bg-red-50 p-4">
+              <p className="text-sm font-semibold text-red-800">Transfer failed</p>
+              <p className="mt-1 text-sm text-red-700">{errorMessage}</p>
+            </div>
+          ) : null}
+        </section>
+      </main>
+    );
+  }
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-zinc-100 px-4 py-8">

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { HomeStartReceiveButton } from "@/app/home-start-receive-button";
 
 export default function Home() {
   return (
@@ -20,15 +21,7 @@ export default function Home() {
             </span>
           </Link>
 
-          <Link
-            href="/receive?start=1"
-            className="group rounded-2xl border border-emerald-200 bg-emerald-50 px-6 py-6 text-emerald-950 transition hover:bg-emerald-100"
-          >
-            <span className="block text-2xl font-extrabold tracking-[0.03em] leading-none">RECEIVE</span>
-            <span className="mt-2 block text-sm font-medium leading-5 text-emerald-700 transition group-hover:text-emerald-800">
-              on this device
-            </span>
-          </Link>
+          <HomeStartReceiveButton />
         </div>
 
         <div className="mt-6 rounded-2xl border border-zinc-200 bg-gradient-to-b from-zinc-50 to-white p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.8)]">
