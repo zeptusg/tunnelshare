@@ -1,20 +1,21 @@
 # TunnelShare Test Strategy
 
 ## Objective
-Build a reliable, maintainable Playwright suite that protects TunnelShare’s core text-sharing flow.
+Build a reliable, maintainable test suite that protects TunnelShare’s transfer model across both sender-first and receiver-first flows.
 
 ## Quality Priorities
-1. Session create/receive works end-to-end.
-2. Invalid or expired sessions fail gracefully.
-3. API contracts stay stable.
-4. Tests remain deterministic and low-flake.
+1. Sender-first and receiver-first transfer flows work end-to-end.
+2. Waiting transfers transition to ready reliably through polling.
+3. Invalid, missing, and expired transfers fail gracefully.
+4. API contracts stay stable as the app shifts from legacy sessions to transfers.
+5. Tests remain deterministic and low-flake.
 
 ## Test Types
 - **Static checks:** lint + type checks before functional runs.
-- **API tests:** validate `POST /api/sessions`, `GET /api/sessions/[code]`, `GET /api/health/redis`.
+- **API tests:** validate `POST /api/transfers`, `GET /api/transfers/[code]`, `POST /api/transfers/[code]/payload`, `GET /api/health/redis`.
 - **UI tests:** route navigation and page-level behavior.
 - **E2E tests:** UI -> API -> Redis -> UI critical journeys.
-- **Negative tests:** invalid code, missing session, expired session, oversized payload.
+- **Negative tests:** invalid code, missing transfer, expired transfer, invalid transfer state, oversized payload.
 
 ## Prioritization Model
 - **P0:** release-blocking core flows.
@@ -25,6 +26,8 @@ Build a reliable, maintainable Playwright suite that protects TunnelShare’s co
 - Prefer semantic selectors (`getByRole`, `getByLabel`).
 - Keep test data isolated per test.
 - Use API setup when UI setup is not the behavior under test.
+- Keep one canonical retrieval path in tests: `/receive/[code]`.
+- Treat polling as product behavior, not as an implementation detail to mock away.
 - Capture traces/screenshots on failure.
 
 ## Release Confidence

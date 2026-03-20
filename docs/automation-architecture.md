@@ -15,7 +15,7 @@ tests/
 
 ## Layer Responsibilities
 - **`tests/e2e`**: core user journeys across UI/API/Redis
-- **`tests/api`**: fast contract and negative checks
+- **`tests/api`**: fast contract and negative checks for transfer routes
 - **`tests/pages`**: page objects for readability/reuse
 - **`tests/fixtures`**: setup/data isolation per test
 - **`tests/helpers`**: shared clients/assertions
@@ -31,6 +31,8 @@ tests/
 - Prefer API seeding unless UI setup is under test.
 - Keep at least one true UI happy-path E2E.
 - Run expiry tests in short-TTL env.
+- Prefer seeding transfers through `/api/transfers` instead of legacy session routes.
+- Keep receiver-first polling tests in E2E so the real browser behavior is covered.
 
 ## Execution Model
 - **Local:** Chromium-focused quick feedback.
