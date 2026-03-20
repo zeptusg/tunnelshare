@@ -7,7 +7,7 @@ export default function Home() {
       <section className="w-full max-w-xl rounded-3xl border border-zinc-200 bg-white p-8 shadow-sm">
         <h1 className="text-center text-3xl font-bold text-zinc-900">TunnelShare</h1>
         <p className="mt-3 text-center text-sm leading-6 text-zinc-600">
-          Start a transfer in the direction you want, or enter a code you already have.
+          Choose whether to send or receive a transfer.
         </p>
 
         <div className="mt-8 grid gap-4 sm:grid-cols-2">
@@ -29,6 +29,9 @@ export default function Home() {
             Manual entry
           </p>
           <p className="mt-2 text-base font-semibold text-zinc-900">Enter existing code</p>
+          <p className="mt-1 text-sm leading-6 text-zinc-600">
+            Use this if another device already gave you a transfer code.
+          </p>
 
           <form action="/receive" method="get" className="mt-4 space-y-3">
             <label className="block">
@@ -45,7 +48,7 @@ export default function Home() {
               type="submit"
               className="flex h-12 w-full items-center justify-center rounded-xl border border-zinc-300 bg-white text-base font-semibold text-zinc-900 transition hover:bg-zinc-100"
             >
-              Receive
+              Use existing code
             </button>
           </form>
         </div>

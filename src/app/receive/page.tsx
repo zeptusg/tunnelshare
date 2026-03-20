@@ -63,7 +63,7 @@ function ReceivePageContent() {
 
       const data: unknown = await response.json();
       if (!response.ok) {
-        setErrorMessage("Failed to create receive request.");
+        setErrorMessage("Could not start the receive request.");
         return;
       }
 
@@ -76,10 +76,10 @@ function ReceivePageContent() {
         return;
       }
 
-      setErrorMessage("Invalid transfer response.");
+      setErrorMessage("Received an invalid transfer response.");
     } catch (error) {
       console.error("Create receive transfer request failed:", error);
-      setErrorMessage("Create receive transfer request failed.");
+      setErrorMessage("Could not start the receive request.");
     } finally {
       setPending(false);
     }
@@ -128,7 +128,7 @@ function ReceivePageContent() {
       <section className="w-full max-w-md rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm sm:p-8">
         <h1 className="text-2xl font-bold text-zinc-900">Receive Transfer</h1>
         <p className="mt-2 text-sm leading-6 text-zinc-600">
-          Use an existing code if someone already shared one with you, or start a receive request to let another device send here.
+          Enter a code you already have, or start a new receive request for this device.
         </p>
 
         <div className="mt-6 space-y-4">

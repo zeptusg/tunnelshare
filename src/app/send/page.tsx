@@ -81,7 +81,7 @@ function SendPageContent() {
       console.log("Transfer action response:", data);
 
       if (!response.ok) {
-        setErrorMessage("Failed to send transfer.");
+        setErrorMessage("Could not send the transfer.");
         return;
       }
 
@@ -91,10 +91,10 @@ function SendPageContent() {
         return;
       }
 
-      setErrorMessage("Invalid transfer response.");
+      setErrorMessage("Received an invalid transfer response.");
     } catch (error) {
       console.error("Transfer request failed:", error);
-      setErrorMessage("Transfer request failed.");
+      setErrorMessage("Could not send the transfer.");
     } finally {
       setPending(false);
     }
@@ -118,11 +118,15 @@ function SendPageContent() {
     <main className="flex min-h-screen items-center justify-center bg-zinc-100 px-4 py-8">
       <section className="w-full max-w-lg rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm sm:p-8">
         <h1 className="text-2xl font-bold text-zinc-900">
-          {isFulfillingTransfer ? "Send To Waiting Transfer" : "Send Text"}
+          {isFulfillingTransfer ? "Send to This Device" : "Send Transfer"}
         </h1>
         {isFulfillingTransfer ? (
           <p className="mt-2 text-sm text-zinc-500">Transfer code: {requestedCode}</p>
-        ) : null}
+        ) : (
+          <p className="mt-2 text-sm leading-6 text-zinc-600">
+            Send text now. File transfer UI will plug into this same flow next.
+          </p>
+        )}
 
         <div className="mt-6 space-y-4">
           <textarea
@@ -164,7 +168,12 @@ function SendPageContent() {
 
           {transfer ? (
             <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-4">
-              <p className="text-center text-3xl font-bold tracking-wide text-zinc-900">{transfer.code}</p>
+              <p
+                aria-label="Created transfer code"
+                className="text-center text-3xl font-bold tracking-wide text-zinc-900"
+              >
+                {transfer.code}
+              </p>
 
               <div className="mt-3 flex items-center justify-center gap-3">
                 <button
