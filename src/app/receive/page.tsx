@@ -46,7 +46,9 @@ function ReceivePageContent() {
     router.push(`/receive/${normalizedCode}`);
   }
 
-  async function startReceiveTransfer(): Promise<void> {
+  async function startReceiveTransfer(
+    navigationMode: "push" | "replace" = "push"
+  ): Promise<void> {
     try {
       setPending(true);
       setErrorMessage(null);
@@ -65,7 +67,11 @@ function ReceivePageContent() {
       }
 
       if (isCreateTransferResponse(data)) {
-        router.push(`/receive/${data.code}`);
+        if (navigationMode === "replace") {
+          router.replace(`/receive/${data.code}`);
+        } else {
+          router.push(`/receive/${data.code}`);
+        }
         return;
       }
 
@@ -79,7 +85,7 @@ function ReceivePageContent() {
   }
 
   const startReceiveTransferFromEffect = useEffectEvent(() => {
-    void startReceiveTransfer();
+    void startReceiveTransfer("replace");
   });
 
   useEffect(() => {
@@ -120,7 +126,9 @@ function ReceivePageContent() {
 
           <button
             type="button"
-            onClick={startReceiveTransfer}
+            onClick={() => {
+              void startReceiveTransfer();
+            }}
             className="flex h-12 w-full items-center justify-center rounded-xl border border-emerald-200 bg-emerald-50 text-base font-semibold text-emerald-900 transition hover:bg-emerald-100"
             disabled={pending}
           >
