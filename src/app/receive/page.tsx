@@ -2,18 +2,7 @@
 
 import { Suspense, useEffect, useEffectEvent, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-
-type CreateTransferResponse = {
-  code: string;
-};
-
-function isCreateTransferResponse(value: unknown): value is CreateTransferResponse {
-  return (
-    typeof value === "object" &&
-    value !== null &&
-    typeof (value as Partial<CreateTransferResponse>).code === "string"
-  );
-}
+import { createTransferResponseSchema } from "@/lib/transfer-client";
 
 function ReceivePageContent() {
   const router = useRouter();
@@ -67,11 +56,12 @@ function ReceivePageContent() {
         return;
       }
 
-      if (isCreateTransferResponse(data)) {
+      const parsedResponse = createTransferResponseSchema.safeParse(data);
+      if (parsedResponse.success) {
         if (navigationMode === "replace") {
-          router.replace(`/receive/${data.code}`);
+          router.replace(`/receive/${parsedResponse.data.code}`);
         } else {
-          router.push(`/receive/${data.code}`);
+          router.push(`/receive/${parsedResponse.data.code}`);
         }
         return;
       }

@@ -2,18 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-
-type CreateTransferResponse = {
-  code: string;
-};
-
-function isCreateTransferResponse(value: unknown): value is CreateTransferResponse {
-  return (
-    typeof value === "object" &&
-    value !== null &&
-    typeof (value as Partial<CreateTransferResponse>).code === "string"
-  );
-}
+import { createTransferResponseSchema } from "@/lib/transfer-client";
 
 export function HomeStartReceiveButton() {
   const router = useRouter();
@@ -31,12 +20,13 @@ export function HomeStartReceiveButton() {
       });
 
       const data: unknown = await response.json();
-      if (!response.ok || !isCreateTransferResponse(data)) {
+      const parsedResponse = createTransferResponseSchema.safeParse(data);
+      if (!response.ok || !parsedResponse.success) {
         setPending(false);
         return;
       }
 
-      router.push(`/receive/${data.code}`);
+      router.push(`/receive/${parsedResponse.data.code}`);
     } catch {
       setPending(false);
     }

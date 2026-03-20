@@ -3,27 +3,10 @@
 import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { QRCodeSVG } from "qrcode.react";
-
-type TransferActionResponse = {
-  code: string;
-  status: "awaiting_payload" | "ready";
-  receiveUrl: string;
-  expiresAt: string;
-};
-
-function isTransferActionResponse(value: unknown): value is TransferActionResponse {
-  if (typeof value !== "object" || value === null) {
-    return false;
-  }
-
-  const candidate = value as Partial<TransferActionResponse>;
-  return (
-    typeof candidate.code === "string" &&
-    (candidate.status === "awaiting_payload" || candidate.status === "ready") &&
-    typeof candidate.receiveUrl === "string" &&
-    typeof candidate.expiresAt === "string"
-  );
-}
+import {
+  type TransferActionResponse,
+  transferActionResponseSchema,
+} from "@/lib/transfer-client";
 
 function SendPageContent() {
   const searchParams = useSearchParams();
@@ -85,8 +68,9 @@ function SendPageContent() {
         return;
       }
 
-      if (isTransferActionResponse(data)) {
-        setTransfer(data);
+      const parsedResponse = transferActionResponseSchema.safeParse(data);
+      if (parsedResponse.success) {
+        setTransfer(parsedResponse.data);
         setCopied(false);
         return;
       }

@@ -4,95 +4,16 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
 import { QRCodeSVG } from "qrcode.react";
-
-type FileReference = {
-  id: string;
-  name: string;
-  sizeBytes: number;
-  contentType: string;
-  storageKey: string;
-};
-
-type TransferPayload =
-  | {
-      type: "text";
-      content: string;
-      metadata?: Record<string, unknown>;
-    }
-  | {
-      type: "files";
-      content: FileReference[];
-      metadata?: Record<string, unknown>;
-    };
-
-type TransferResponse = {
-  code: string;
-  status: "awaiting_payload" | "ready" | "consumed" | "expired";
-  payload?: TransferPayload;
-  sendUrl?: string;
-  expiresAt: string;
-};
+import {
+  publicTransferResponseSchema,
+  type PublicTransferResponse,
+} from "@/lib/transfer-client";
 
 type PageState =
   | { status: "loading" }
-  | { status: "waiting"; transfer: TransferResponse }
+  | { status: "waiting"; transfer: PublicTransferResponse }
   | { status: "error"; message: string }
-  | { status: "ready"; transfer: TransferResponse };
-
-function isFileReference(value: unknown): value is FileReference {
-  if (typeof value !== "object" || value === null) {
-    return false;
-  }
-
-  const candidate = value as Partial<FileReference>;
-  return (
-    typeof candidate.id === "string" &&
-    typeof candidate.name === "string" &&
-    typeof candidate.sizeBytes === "number" &&
-    typeof candidate.contentType === "string" &&
-    typeof candidate.storageKey === "string"
-  );
-}
-
-function isTransferPayload(value: unknown): value is TransferPayload {
-  if (typeof value !== "object" || value === null) {
-    return false;
-  }
-
-  const candidate = value as Partial<TransferPayload>;
-  if (candidate.type === "text") {
-    return typeof candidate.content === "string";
-  }
-
-  if (candidate.type === "files") {
-    return Array.isArray(candidate.content) && candidate.content.every(isFileReference);
-  }
-
-  return false;
-}
-
-function isTransferResponse(value: unknown): value is TransferResponse {
-  if (typeof value !== "object" || value === null) {
-    return false;
-  }
-
-  const candidate = value as Partial<TransferResponse>;
-  if (
-    typeof candidate.code !== "string" ||
-    typeof candidate.expiresAt !== "string" ||
-    (candidate.sendUrl !== undefined && typeof candidate.sendUrl !== "string") ||
-    !(
-      candidate.status === "awaiting_payload" ||
-      candidate.status === "ready" ||
-      candidate.status === "consumed" ||
-      candidate.status === "expired"
-    )
-  ) {
-    return false;
-  }
-
-  return candidate.payload === undefined || isTransferPayload(candidate.payload);
-}
+  | { status: "ready"; transfer: PublicTransferResponse };
 
 export default function ReceiveCodePage() {
   const params = useParams<{ code?: string }>();
@@ -140,27 +61,29 @@ export default function ReceiveCodePage() {
         }
 
         const data: unknown = await response.json();
-        if (!isTransferResponse(data)) {
+        const parsedResponse = publicTransferResponseSchema.safeParse(data);
+        if (!parsedResponse.success) {
           if (!cancelled) {
             setState({ status: "error", message: "Invalid transfer response." });
           }
           return;
         }
+        const transfer = parsedResponse.data;
 
         if (cancelled) {
           return;
         }
 
-        if (data.status === "awaiting_payload") {
-          setState({ status: "waiting", transfer: data });
+        if (transfer.status === "awaiting_payload") {
+          setState({ status: "waiting", transfer });
           pollTimeout = setTimeout(() => {
             void loadTransfer();
           }, 1500);
           return;
         }
 
-        if (data.status === "ready") {
-          setState({ status: "ready", transfer: data });
+        if (transfer.status === "ready") {
+          setState({ status: "ready", transfer });
           setCopied(false);
           return;
         }
