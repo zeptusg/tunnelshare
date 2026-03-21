@@ -4,8 +4,7 @@ test("ready transfer cannot be fulfilled again", async ({ request }) => {
   const createResponse = await request.post("/api/transfers", {
     data: {
       payload: {
-        type: "text",
-        content: "already ready",
+        text: "already ready",
       },
     },
   });
@@ -15,8 +14,7 @@ test("ready transfer cannot be fulfilled again", async ({ request }) => {
   const fulfillResponse = await request.post(`/api/transfers/${created.code}/payload`, {
     data: {
       payload: {
-        type: "text",
-        content: "second payload should fail",
+        text: "second payload should fail",
       },
     },
   });
@@ -31,8 +29,7 @@ test("missing transfer cannot be fulfilled", async ({ request }) => {
   const fulfillResponse = await request.post("/api/transfers/ABCD-EFGH/payload", {
     data: {
       payload: {
-        type: "text",
-        content: "missing transfer",
+        text: "missing transfer",
       },
     },
   });

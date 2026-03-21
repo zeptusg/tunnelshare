@@ -19,8 +19,7 @@ test("create transfer rejects oversized text payload", async ({ request }) => {
   const response = await request.post("/api/transfers", {
     data: {
       payload: {
-        type: "text",
-        content: oversizedText,
+        text: oversizedText,
       },
     },
   });
@@ -64,8 +63,7 @@ test("fulfill transfer rejects oversized text payload", async ({ request }) => {
   const fulfillResponse = await request.post(`/api/transfers/${created.code}/payload`, {
     data: {
       payload: {
-        type: "text",
-        content: oversizedText,
+        text: oversizedText,
       },
     },
   });
