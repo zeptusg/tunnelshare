@@ -27,12 +27,12 @@ const fulfillTransferRequestSchema = z
   })
   .superRefine((value, ctx) => {
     if (
-      value.payload.type === "text" &&
-      Buffer.byteLength(value.payload.content, "utf8") > config.maxTextBytes
+      typeof value.payload.text === "string" &&
+      Buffer.byteLength(value.payload.text, "utf8") > config.maxTextBytes
     ) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        path: ["payload", "content"],
+        path: ["payload", "text"],
         message: `text exceeds MAX_TEXT_BYTES (${config.maxTextBytes})`,
       });
     }
