@@ -1,8 +1,10 @@
 import { test, expect } from '@playwright/test';
 
-test('manual lowercase code entry normalizes and retrieves transfer payload', async ({ page }) => {
+test('manual lowercase code entry normalizes and retrieves text payload', async ({ page }) => {
     await page.goto('/send');
-    await page.getByLabel(/text to send/i).fill('normalization check');
+    const textMessage = 'normalization check';
+
+    await page.getByLabel(/text to send/i).fill(textMessage);
     await page.getByRole('button', { name: /^send$/i }).click();
 
     const transferCode = page.getByLabel(/created transfer code/i);
@@ -16,5 +18,5 @@ test('manual lowercase code entry normalizes and retrieves transfer payload', as
     await page.getByRole('button', { name: /use existing code/i }).click();
 
     await expect(page).toHaveURL(new RegExp(`/receive/${code}$`));
-    await expect(page.getByText('normalization check')).toBeVisible();
+    await expect(page.getByText(textMessage)).toBeVisible();
 });

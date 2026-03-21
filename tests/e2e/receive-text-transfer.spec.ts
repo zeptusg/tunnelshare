@@ -1,8 +1,9 @@
 import { test, expect } from '@playwright/test';
 
-test('receiver-first transfer waits and becomes ready after sender fulfillment', async ({ browser }) => {
+test('receiver-first text transfer waits and becomes ready after sender fulfillment', async ({ browser }) => {
     const receiverPage = await browser.newPage();
     const senderPage = await browser.newPage();
+    const textMessage = 'hello from receiver-first flow';
 
     await receiverPage.goto('/receive');
     await receiverPage.getByRole('button', { name: /start receive request/i }).click();
@@ -14,11 +15,11 @@ test('receiver-first transfer waits and becomes ready after sender fulfillment',
     const code = receiverPage.url().split('/').pop()!;
 
     await senderPage.goto(`/send?code=${code}`);
-    await senderPage.getByLabel(/text to send/i).fill('hello from receiver-first flow');
+    await senderPage.getByLabel(/text to send/i).fill(textMessage);
     await senderPage.getByRole('button', { name: /^send$/i }).click();
     await expect(senderPage.getByLabel(/created transfer code/i)).toHaveText(code);
 
-    await expect(receiverPage.getByText('hello from receiver-first flow')).toBeVisible();
+    await expect(receiverPage.getByText(textMessage)).toBeVisible();
 
     await receiverPage.close();
     await senderPage.close();
