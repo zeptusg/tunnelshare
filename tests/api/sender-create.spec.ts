@@ -94,3 +94,63 @@ test("sender-first transfer create can resolve uploaded asset ids into file refe
     },
   });
 });
+
+test("sender-first transfer create can combine text and uploaded asset ids", async ({
+  request,
+}) => {
+  const fileContent = "sender-first mixed payload file";
+  const fileSize = Buffer.byteLength(fileContent, "utf8");
+
+  const uploadTargetResponse = await request.post("/api/uploads", {
+    data: {
+      file: {
+        name: "mixed-sender-file.txt",
+        sizeBytes: fileSize,
+        contentType: "text/plain",
+      },
+    },
+  });
+  expect(uploadTargetResponse.status()).toBe(201);
+  const uploadTarget = await uploadTargetResponse.json();
+
+  const uploadResponse = await request.fetch(uploadTarget.uploadUrl, {
+    method: uploadTarget.uploadMethod,
+    headers: uploadTarget.headers,
+    data: Buffer.from(fileContent, "utf8"),
+  });
+  expect(uploadResponse.status()).toBe(200);
+  const storedAsset = await uploadResponse.json();
+
+  const createResponse = await request.post("/api/transfers", {
+    data: {
+      payload: {
+        text: "sender mixed payload text",
+        uploadedAssetIds: [storedAsset.id],
+      },
+    },
+  });
+
+  expect(createResponse.status()).toBe(201);
+  const created = await createResponse.json();
+
+  const getResponse = await request.get(`/api/transfers/${created.code}`);
+  expect(getResponse.status()).toBe(200);
+  const transfer = await getResponse.json();
+
+  expect(transfer).toMatchObject({
+    code: created.code,
+    status: "ready",
+    payload: {
+      text: "sender mixed payload text",
+      files: [
+        {
+          id: storedAsset.id,
+          name: "mixed-sender-file.txt",
+          sizeBytes: fileSize,
+          contentType: "text/plain",
+          storageKey: storedAsset.storageKey,
+        },
+      ],
+    },
+  });
+});

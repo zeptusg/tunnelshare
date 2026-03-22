@@ -1,0 +1,11 @@
+{
+  "id": "db536923-2bef-45c6-a99d-f6e09986de85",
+  "name": "sender-file.txt",
+  "sizeBytes": 26,
+  "contentType": "text/plain",
+  "storageKey": "local/db536923-2bef-45c6-a99d-f6e09986de85/sender-file.txt",
+  "createdAt": "2026-03-22T17:47:05.034Z",
+  "expiresAt": "2026-03-22T17:57:05.034Z",
+  "uploadPath": "/Users/zeptus/Projects/tunnelshare/.tunnelshare/uploads/local/db536923-2bef-45c6-a99d-f6e09986de85/sender-file.txt",
+  "hasBytes": true
+}

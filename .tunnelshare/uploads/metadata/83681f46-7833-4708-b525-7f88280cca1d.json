@@ -1,0 +1,11 @@
+{
+  "id": "83681f46-7833-4708-b525-7f88280cca1d",
+  "name": "sample.txt",
+  "sizeBytes": 27,
+  "contentType": "text/plain",
+  "storageKey": "local/83681f46-7833-4708-b525-7f88280cca1d/sample.txt",
+  "createdAt": "2026-03-22T17:47:09.159Z",
+  "expiresAt": "2026-03-22T17:57:09.159Z",
+  "uploadPath": "/Users/zeptus/Projects/tunnelshare/.tunnelshare/uploads/local/83681f46-7833-4708-b525-7f88280cca1d/sample.txt",
+  "hasBytes": true
+}

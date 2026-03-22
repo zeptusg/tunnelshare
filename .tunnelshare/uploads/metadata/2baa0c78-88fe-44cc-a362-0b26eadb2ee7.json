@@ -1,0 +1,11 @@
+{
+  "id": "2baa0c78-88fe-44cc-a362-0b26eadb2ee7",
+  "name": "mixed-receiver-file.txt",
+  "sizeBytes": 33,
+  "contentType": "text/plain",
+  "storageKey": "local/2baa0c78-88fe-44cc-a362-0b26eadb2ee7/mixed-receiver-file.txt",
+  "createdAt": "2026-03-22T17:47:06.643Z",
+  "expiresAt": "2026-03-22T17:57:06.643Z",
+  "uploadPath": "/Users/zeptus/Projects/tunnelshare/.tunnelshare/uploads/local/2baa0c78-88fe-44cc-a362-0b26eadb2ee7/mixed-receiver-file.txt",
+  "hasBytes": true
+}

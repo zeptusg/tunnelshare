@@ -1,0 +1,11 @@
+{
+  "id": "fa57b143-e64e-430a-ab01-cd0b58fba630",
+  "name": "sender-file.txt",
+  "sizeBytes": 26,
+  "contentType": "text/plain",
+  "storageKey": "local/fa57b143-e64e-430a-ab01-cd0b58fba630/sender-file.txt",
+  "createdAt": "2026-03-22T17:47:08.762Z",
+  "expiresAt": "2026-03-22T17:57:08.762Z",
+  "uploadPath": "/Users/zeptus/Projects/tunnelshare/.tunnelshare/uploads/local/fa57b143-e64e-430a-ab01-cd0b58fba630/sender-file.txt",
+  "hasBytes": true
+}
