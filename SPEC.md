@@ -42,6 +42,7 @@ Important rules:
 - QR URLs are server-issued and may be role-specific.
 - Waiting transfers use polling first. SSE or WebSockets can be added later on top of the same transfer lifecycle.
 - File uploads and transfer state are separate concerns: uploads prepare assets, transfers reference them.
+- Storage and upload handling should remain abstract enough to support serverless deployment and future cloud storage backends.
 
 
 ## Core Flow
@@ -176,6 +177,7 @@ Future file handling direction:
 - file bytes are uploaded through a dedicated asset pipeline
 - the transfer is finalized only after it can reference uploaded assets
 - the same payload contract must work for web UI and future native share-sheet entry
+- storage access should sit behind a server-side abstraction so local development and future cloud/object storage can use the same transfer model
 
 Sender-first response:
 
@@ -298,6 +300,7 @@ Planned extensions:
 - Multiple file sharing
 - Mixed text + file sending in one composed UI
 - Native or wrapped mobile share-sheet intake using the same transfer payload model
+- Optional user/account system layered on top of the same transfer and upload architecture
 - End-to-end encryption
 - Device pairing
 - Clipboard integration

@@ -80,6 +80,7 @@ Upload direction:
 - File bytes should move through a dedicated asset/upload pipeline, not directly through the transfer record.
 - Transfers should be created or fulfilled only after they can reference uploaded assets.
 - Per-file progress, retry, and resumable behavior belong to upload handling, not transfer state transitions.
+- Storage access should be abstracted behind server-side interfaces so local adapters and future cloud/object-storage adapters can share the same transfer logic.
 
 Transport policy:
 
@@ -108,6 +109,7 @@ Migration note:
 - UI pages only submit inputs, poll APIs, and render returned state.
 - File storage metadata and file reference resolution also belong to server-side transfer logic.
 - Raw file bytes must remain outside the transfer record; transfers store metadata and file references only.
+- Future user/account linkage should attach to transfer and asset metadata without changing transfer payload structure.
 
 ## Future Mobile Share Entry
 
