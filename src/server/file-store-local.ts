@@ -48,12 +48,21 @@ async function writeLocalAssetRecord(record: LocalAssetRecord): Promise<void> {
   await writeFile(metadataPath, JSON.stringify(record, null, 2), "utf8");
 }
 
-async function readLocalAssetRecord(assetId: string): Promise<LocalAssetRecord> {
+export async function readLocalAssetRecord(assetId: string): Promise<LocalAssetRecord> {
   const metadataPath = getLocalAssetMetadataPath(assetId);
   const raw = await readFile(metadataPath, "utf8");
   const parsed = JSON.parse(raw) as unknown;
 
   return localAssetRecordSchema.parse(parsed) as LocalAssetRecord;
+}
+
+export async function writeLocalUploadBytes(
+  assetId: string,
+  bytes: Uint8Array
+): Promise<void> {
+  const record = await readLocalAssetRecord(assetId);
+  await mkdir(path.dirname(record.uploadPath), { recursive: true });
+  await writeFile(record.uploadPath, bytes);
 }
 
 function buildStoredFileAsset(record: LocalAssetRecord): StoredFileAsset {
