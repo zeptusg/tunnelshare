@@ -1,0 +1,11 @@
+{
+  "id": "a262ea44-aece-4994-a5de-72a6f2e85794",
+  "name": "mixed-file.txt",
+  "sizeBytes": 17,
+  "contentType": "text/plain",
+  "storageKey": "local/a262ea44-aece-4994-a5de-72a6f2e85794/mixed-file.txt",
+  "createdAt": "2026-03-22T18:11:10.004Z",
+  "expiresAt": "2026-03-22T18:21:10.004Z",
+  "uploadPath": "/Users/zeptus/Projects/tunnelshare/.tunnelshare/uploads/local/a262ea44-aece-4994-a5de-72a6f2e85794/mixed-file.txt",
+  "hasBytes": true
+}

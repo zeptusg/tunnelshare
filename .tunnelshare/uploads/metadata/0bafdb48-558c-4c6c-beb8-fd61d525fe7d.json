@@ -1,0 +1,11 @@
+{
+  "id": "0bafdb48-558c-4c6c-beb8-fd61d525fe7d",
+  "name": "mixed-file.txt",
+  "sizeBytes": 17,
+  "contentType": "text/plain",
+  "storageKey": "local/0bafdb48-558c-4c6c-beb8-fd61d525fe7d/mixed-file.txt",
+  "createdAt": "2026-03-22T18:12:58.306Z",
+  "expiresAt": "2026-03-22T18:22:58.306Z",
+  "uploadPath": "/Users/zeptus/Projects/tunnelshare/.tunnelshare/uploads/local/0bafdb48-558c-4c6c-beb8-fd61d525fe7d/mixed-file.txt",
+  "hasBytes": true
+}
