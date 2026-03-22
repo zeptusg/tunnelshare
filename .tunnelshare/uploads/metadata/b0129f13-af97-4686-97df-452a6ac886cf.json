@@ -1,0 +1,11 @@
+{
+  "id": "b0129f13-af97-4686-97df-452a6ac886cf",
+  "name": "sample.txt",
+  "sizeBytes": 27,
+  "contentType": "text/plain",
+  "storageKey": "local/b0129f13-af97-4686-97df-452a6ac886cf/sample.txt",
+  "createdAt": "2026-03-22T17:19:14.914Z",
+  "expiresAt": "2026-03-22T17:29:14.914Z",
+  "uploadPath": "/Users/zeptus/Projects/tunnelshare/.tunnelshare/uploads/local/b0129f13-af97-4686-97df-452a6ac886cf/sample.txt",
+  "hasBytes": true
+}
