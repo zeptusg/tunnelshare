@@ -14,5 +14,5 @@ test('sender-first file transfer can be created from send page', async ({ page }
     await expect(receiveLink).toBeVisible();
 
     await receiveLink.click();
-    await expect(page.getByText('playwright-file.txt')).toBeVisible();
+    await expect(page.getByRole('link', { name: 'playwright-file.txt' })).toBeVisible();
 });

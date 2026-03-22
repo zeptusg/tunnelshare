@@ -118,6 +118,10 @@ export default function ReceiveCodePage() {
     }
   }
 
+  function getLocalFileHref(assetId: string): string {
+    return `/api/files/local/${assetId}`;
+  }
+
   return (
     <main className="flex min-h-screen items-center justify-center bg-zinc-100 px-4 py-8">
       <section className="w-full max-w-lg rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm sm:p-8">
@@ -194,8 +198,15 @@ export default function ReceiveCodePage() {
               <p className="text-sm font-semibold text-zinc-900">Files received</p>
               <ul className="mt-3 space-y-2">
                 {readyFilesPayload.map((file) => (
-                  <li key={file.id} className="rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-700">
-                    {file.name}
+                  <li key={file.id} className="rounded-lg border border-zinc-200 bg-white px-3 py-2">
+                    <a
+                      href={getLocalFileHref(file.id)}
+                      className="text-sm font-medium text-blue-700 underline"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      {file.name}
+                    </a>
                   </li>
                 ))}
               </ul>
