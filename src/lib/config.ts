@@ -11,6 +11,11 @@ const configSchema = z.object({
         .number()
         .int("MAX_TEXT_BYTES must be an integer")
         .positive("MAX_TEXT_BYTES must be positive"),
+    maxUploadFileBytes: z.coerce
+        .number()
+        .int("MAX_UPLOAD_FILE_BYTES must be an integer")
+        .positive("MAX_UPLOAD_FILE_BYTES must be positive")
+        .default(15 * 1024 * 1024),
 });
 
 type Config = z.infer<typeof configSchema>;
@@ -21,6 +26,7 @@ function loadConfig(): Config {
         redisUrl: process.env.REDIS_URL,
         sessionTtlSeconds: process.env.SESSION_TTL_SECONDS,
         maxTextBytes: process.env.MAX_TEXT_BYTES,
+        maxUploadFileBytes: process.env.MAX_UPLOAD_FILE_BYTES,
     };
 
     const result = configSchema.safeParse(raw);

@@ -7,9 +7,33 @@ const isoDatetimeSchema = z.string().datetime({ offset: true });
 export const selectedFileSchema = z.object({
   name: z.string().min(1, "File name cannot be empty"),
   sizeBytes: z.number().int().nonnegative("sizeBytes must be a non-negative integer"),
-  contentType: z.string().min(1, "contentType cannot be empty"),
+  // Browsers sometimes provide an empty type for unknown file kinds.
+  contentType: z.string(),
 });
 export type SelectedFile = z.infer<typeof selectedFileSchema>;
+
+export function normalizeUploadContentType(contentType: string): string {
+  const normalizedContentType = contentType.trim();
+  return normalizedContentType || "application/octet-stream";
+}
+
+export function validateSelectedFileForUpload(
+  file: SelectedFile,
+  options: {
+    maxUploadFileBytes: number;
+  }
+):
+  | { ok: true }
+  | {
+      ok: false;
+      error: "file_too_large";
+    } {
+  if (file.sizeBytes > options.maxUploadFileBytes) {
+    return { ok: false, error: "file_too_large" };
+  }
+
+  return { ok: true };
+}
 
 export const uploadTargetSchema = z.object({
   assetId: z.string().min(1, "Asset id cannot be empty"),

@@ -2,8 +2,10 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { config } from "@/lib/config";
 import {
+  normalizeUploadContentType,
   selectedFileSchema,
   uploadTargetSchema,
+  validateSelectedFileForUpload,
   type UploadTarget,
 } from "@/lib/file-assets";
 import { createLocalFileStore } from "@/server/file-store-local";
@@ -16,7 +18,15 @@ const fileStore = createLocalFileStore();
 
 export async function POST(
   request: Request
-): Promise<NextResponse<UploadTarget | { error: string }>> {
+): Promise<
+  NextResponse<
+    | UploadTarget
+    | {
+        error: string;
+        maxUploadFileBytes?: number;
+      }
+  >
+> {
   try {
     let body: unknown;
     try {
@@ -30,8 +40,27 @@ export async function POST(
       return NextResponse.json({ error: "invalid_request" }, { status: 400 });
     }
 
+    const normalizedFile = {
+      ...requestResult.data.file,
+      contentType: normalizeUploadContentType(requestResult.data.file.contentType),
+    };
+
+    const fileValidation = validateSelectedFileForUpload(normalizedFile, {
+      maxUploadFileBytes: config.maxUploadFileBytes,
+    });
+
+    if (!fileValidation.ok) {
+      return NextResponse.json(
+        {
+          error: "file_too_large",
+          maxUploadFileBytes: config.maxUploadFileBytes,
+        },
+        { status: 400 }
+      );
+    }
+
     const uploadTarget = await fileStore.createUploadTarget({
-      file: requestResult.data.file,
+      file: normalizedFile,
       ttlSeconds: config.sessionTtlSeconds,
     });
 

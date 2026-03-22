@@ -47,3 +47,41 @@ test("local upload target accepts bytes and returns stored file asset", async ({
   expect(downloadResponse.headers()["content-type"]).toContain("text/plain");
   expect(await downloadResponse.text()).toBe(fileContent);
 });
+
+test("upload target rejects files that exceed the configured size limit", async ({
+  request,
+}) => {
+  const createResponse = await request.post("/api/uploads", {
+    data: {
+      file: {
+        name: "too-large.txt",
+        sizeBytes: 15 * 1024 * 1024 + 1,
+        contentType: "text/plain",
+      },
+    },
+  });
+
+  expect(createResponse.status()).toBe(400);
+  await expect(createResponse.json()).resolves.toMatchObject({
+    error: "file_too_large",
+    maxUploadFileBytes: 15 * 1024 * 1024,
+  });
+});
+
+test("upload target accepts office document metadata", async ({ request }) => {
+  const createResponse = await request.post("/api/uploads", {
+    data: {
+      file: {
+        name: "report.docx",
+        sizeBytes: 1024,
+        contentType:
+          "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      },
+    },
+  });
+
+  expect(createResponse.status()).toBe(201);
+  await expect(createResponse.json()).resolves.toMatchObject({
+    uploadMethod: "PUT",
+  });
+});
