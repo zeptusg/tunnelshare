@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { config } from "@/lib/config";
 import type { TransferPayload } from "@/lib/types";
 import type { FileStore } from "@/server/file-store";
 import { resolveUploadedFiles } from "@/server/file-assets";
@@ -9,6 +10,10 @@ export const transferPayloadInputSchema = z
     uploadedAssetIds: z
       .array(z.string().min(1, "Asset id cannot be empty"))
       .min(1, "At least one uploaded asset id is required")
+      .max(
+        config.maxUploadFiles,
+        `No more than ${config.maxUploadFiles} uploaded files are allowed`
+      )
       .optional(),
     metadata: z.record(z.string(), z.unknown()).optional(),
   })

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { defaultMaxUploadFileBytes } from "@/lib/upload-policy";
 
 const configSchema = z.object({
     appUrl: z.string().url("APP_URL must be a valid URL"),
@@ -15,7 +16,12 @@ const configSchema = z.object({
         .number()
         .int("MAX_UPLOAD_FILE_BYTES must be an integer")
         .positive("MAX_UPLOAD_FILE_BYTES must be positive")
-        .default(15 * 1024 * 1024),
+        .default(defaultMaxUploadFileBytes),
+    maxUploadFiles: z.coerce
+        .number()
+        .int("MAX_UPLOAD_FILES must be an integer")
+        .positive("MAX_UPLOAD_FILES must be positive")
+        .default(5),
 });
 
 type Config = z.infer<typeof configSchema>;
@@ -27,6 +33,7 @@ function loadConfig(): Config {
         sessionTtlSeconds: process.env.SESSION_TTL_SECONDS,
         maxTextBytes: process.env.MAX_TEXT_BYTES,
         maxUploadFileBytes: process.env.MAX_UPLOAD_FILE_BYTES,
+        maxUploadFiles: process.env.MAX_UPLOAD_FILES,
     };
 
     const result = configSchema.safeParse(raw);
