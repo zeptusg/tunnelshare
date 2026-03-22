@@ -59,12 +59,17 @@ Acceptance:
 - Polling behavior is explicit and testable.
 
 ## M4 — File Payload Evolution
-- Extend transfer payload schema from text-only to support file collections
+- Extend transfer payload schema from text-only to a mixed payload envelope
+- Support:
+  - text only
+  - files only
+  - text and files together
 - Use the same transfer lifecycle for single-file and multi-file payloads
 - Keep file metadata/reference storage separate from UI concerns
 
 Acceptance:
 - File transfer can be added without redesigning the transfer state machine.
+- The payload contract requires at least one of text or files.
 - A single file is represented as a one-item file collection.
 
 ## M5 — Compatibility And Hardening

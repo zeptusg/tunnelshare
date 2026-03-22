@@ -9,6 +9,7 @@ Support both transfer entry flows as first-class behavior:
 
 The domain model must support QR-based rendezvous without forcing every transfer to start with a payload.
 The same model must also support text now and file collections later, so single-file and multi-file sharing do not require another domain rewrite.
+The payload contract must also support text and files together in the same transfer.
 
 ## Domain Model
 
@@ -22,8 +23,8 @@ type Transfer = {
   status: TransferStatus;
   initiatedBy: "sender" | "receiver";
   payload?: {
-    type: "text" | "files";
-    content: string | FileReference[];
+    text?: string;
+    files?: FileReference[];
     metadata?: Record<string, unknown>;
   };
   receiveUrl: string;
@@ -38,6 +39,8 @@ Rules:
 - `ready` is valid only when `payload` is present.
 - `consumed` and `expired` are terminal states.
 - A code is the human fallback identifier, not the full QR contract.
+- A payload may contain text, files, or both.
+- At least one of `payload.text` or `payload.files` must exist when a payload is present.
 - File payloads should use `FileReference[]`, even when exactly one file is shared.
 
 ## Flow Semantics
@@ -96,6 +99,7 @@ Migration note:
 - Transfer lifecycle logic lives in `src/server/`.
 - UI pages only submit inputs, poll APIs, and render returned state.
 - File storage metadata and file reference resolution also belong to server-side transfer logic.
+- Raw file bytes must remain outside the transfer record; transfers store metadata and file references only.
 
 ## Non-Goals
 
