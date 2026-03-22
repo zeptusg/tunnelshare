@@ -41,6 +41,7 @@ Important rules:
 - Waiting state is allowed only for transfer coordination.  
 - QR URLs are server-issued and may be role-specific.
 - Waiting transfers use polling first. SSE or WebSockets can be added later on top of the same transfer lifecycle.
+- File uploads and transfer state are separate concerns: uploads prepare assets, transfers reference them.
 
 
 ## Core Flow
@@ -122,6 +123,7 @@ Compatibility note:
 - Transfer is the primary domain concept going forward
 
 For file sharing, the payload will reference one or more stored files instead of containing file bytes directly.
+Upload progress for one or many files should be handled outside the transfer state machine so retries or slower files do not corrupt transfer state.
 
 
 ## API Endpoints
@@ -168,6 +170,12 @@ Future mixed payload contract:
     files?: fileReference[]
   }
 }
+
+Future file handling direction:
+
+- file bytes are uploaded through a dedicated asset pipeline
+- the transfer is finalized only after it can reference uploaded assets
+- the same payload contract must work for web UI and future native share-sheet entry
 
 Sender-first response:
 
@@ -239,6 +247,7 @@ Entry page with two options:
 Components:
 - input for text
 - file upload (future, designed for one or many files)
+- drag/drop or picker-based file selection where supported
 - Send button
 
 Sender-first mode after sending:
@@ -288,6 +297,7 @@ Planned extensions:
 - Real file upload and download support
 - Multiple file sharing
 - Mixed text + file sending in one composed UI
+- Native or wrapped mobile share-sheet intake using the same transfer payload model
 - End-to-end encryption
 - Device pairing
 - Clipboard integration

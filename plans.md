@@ -66,17 +66,37 @@ Acceptance:
   - text and files together
 - Use the same transfer lifecycle for single-file and multi-file payloads
 - Keep file metadata/reference storage separate from UI concerns
+- Keep upload lifecycle separate from transfer lifecycle so multi-file progress and retries do not interrupt the transfer model
 
 Acceptance:
 - File transfer can be added without redesigning the transfer state machine.
 - The payload contract requires at least one of text or files.
 - A single file is represented as a one-item file collection.
 
-## M5 — Compatibility And Hardening
+## M5 — Upload Pipeline
+- Add asset/upload handling separate from transfer creation
+- Support one or many files with per-file progress and retry
+- Finalize a transfer only after the payload is ready to reference uploaded assets
+- Keep raw file bytes out of Redis transfer records
+
+Acceptance:
+- Multi-file upload progress is resilient and does not depend on transfer state transitions.
+- Transfers reference uploaded assets rather than storing file bytes.
+
+## M6 — Compatibility And Hardening
 - Keep `/api/sessions` compatibility only as long as the UI still depends on it
 - Normalize code handling across transfer routes
 - Cover both flows in e2e tests
 - Add SSE or WebSocket transport only if polling becomes insufficient
+
+## M7 — Native Share Entry
+- Evaluate PWA share-target support only as an optional enhancement where the platform supports it
+- Plan a thin native wrapper/app for reliable mobile share-sheet intake
+- Reuse the same upload pipeline and transfer payload contract for web and native entry paths
+
+Acceptance:
+- Mobile share-sheet integration does not require a separate transfer model.
+- Native or wrapped entry flows converge on the same payload finalization path as the web UI.
 
 Acceptance:
 - Old session routes are either removed or explicitly documented as compatibility paths.

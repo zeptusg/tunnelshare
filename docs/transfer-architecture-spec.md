@@ -10,6 +10,7 @@ Support both transfer entry flows as first-class behavior:
 The domain model must support QR-based rendezvous without forcing every transfer to start with a payload.
 The same model must also support text now and file collections later, so single-file and multi-file sharing do not require another domain rewrite.
 The payload contract must also support text and files together in the same transfer.
+The architecture must also leave room for a future native or wrapped mobile share-entry path without changing the transfer model.
 
 ## Domain Model
 
@@ -42,6 +43,7 @@ Rules:
 - A payload may contain text, files, or both.
 - At least one of `payload.text` or `payload.files` must exist when a payload is present.
 - File payloads should use `FileReference[]`, even when exactly one file is shared.
+- Transfer state must not be used to represent in-progress multi-file upload progress.
 
 ## Flow Semantics
 
@@ -73,6 +75,12 @@ Target route shape:
 - `POST /api/transfers/{code}/payload`
   - attaches payload to an `awaiting_payload` transfer
 
+Upload direction:
+
+- File bytes should move through a dedicated asset/upload pipeline, not directly through the transfer record.
+- Transfers should be created or fulfilled only after they can reference uploaded assets.
+- Per-file progress, retry, and resumable behavior belong to upload handling, not transfer state transitions.
+
 Transport policy:
 
 - Initial implementation uses polling for waiting transfers.
@@ -100,6 +108,12 @@ Migration note:
 - UI pages only submit inputs, poll APIs, and render returned state.
 - File storage metadata and file reference resolution also belong to server-side transfer logic.
 - Raw file bytes must remain outside the transfer record; transfers store metadata and file references only.
+
+## Future Mobile Share Entry
+
+- PWA share-target support may be used opportunistically where platform support is good enough.
+- Reliable cross-platform "share to TunnelShare" behavior should be assumed to require a native wrapper or app later.
+- Native share-entry should reuse the same upload pipeline and transfer payload contract as the web UI.
 
 ## Non-Goals
 

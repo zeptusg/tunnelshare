@@ -62,6 +62,9 @@ src/lib/config.ts
 - Polling is the default coordination mechanism for `awaiting_payload`.
 - SSE or WebSockets may be added later, but must layer on top of the same transfer state model.
 - File transfer must be modeled to support one or many files without changing the core transfer shape later.
+- Transfer lifecycle must stay separate from file upload lifecycle.
+- Transfers store file references and metadata, not raw file bytes.
+- Future mobile share-sheet support should reuse the same transfer payload contract rather than introduce a separate domain path.
 
 Transfer model:
 
@@ -92,6 +95,7 @@ Coordination rules:
 - UI must not infer transfer state; it must render server responses.
 - Clients should poll transfer status while waiting. Push transport is an optimization, not a separate state model.
 - Any compatibility session record used during migration must be derived from the transfer state, not treated as the primary domain model.
+- Upload progress and retry behavior belong to asset/upload handling, not to transfer state transitions.
 
 ## Quality Checks
 
