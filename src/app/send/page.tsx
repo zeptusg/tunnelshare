@@ -4,6 +4,10 @@ import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { QRCodeSVG } from "qrcode.react";
 import {
+  storedFileAssetSchema,
+  uploadTargetSchema,
+} from "@/lib/file-assets";
+import {
   type TransferActionResponse,
   transferActionResponseSchema,
 } from "@/lib/transfer-client";
@@ -11,7 +15,7 @@ import {
 function SendPageContent() {
   const searchParams = useSearchParams();
   const [text, setText] = useState("");
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [transfer, setTransfer] = useState<TransferActionResponse | null>(null);
   const [copied, setCopied] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -25,15 +29,67 @@ function SendPageContent() {
     setErrorMessage(null);
   }, [requestedCode]);
 
+  async function uploadSelectedFiles(): Promise<string[]> {
+    const uploadedAssetIds: string[] = [];
+
+    for (const selectedFile of selectedFiles) {
+      const createUploadResponse = await fetch("/api/uploads", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({
+          file: {
+            name: selectedFile.name,
+            sizeBytes: selectedFile.size,
+            contentType: selectedFile.type || "application/octet-stream",
+          },
+        }),
+      });
+
+      const uploadTargetPayload: unknown = await createUploadResponse.json();
+      if (!createUploadResponse.ok) {
+        throw new Error("Failed to create upload target.");
+      }
+
+      const uploadTargetResult = uploadTargetSchema.safeParse(uploadTargetPayload);
+      if (!uploadTargetResult.success) {
+        throw new Error("Received an invalid upload target.");
+      }
+
+      const uploadResponse = await fetch(uploadTargetResult.data.uploadUrl, {
+        method: uploadTargetResult.data.uploadMethod,
+        headers: uploadTargetResult.data.headers,
+        body: selectedFile,
+      });
+
+      const storedAssetPayload: unknown = await uploadResponse.json();
+      if (!uploadResponse.ok) {
+        throw new Error("Failed to upload file bytes.");
+      }
+
+      const storedAssetResult = storedFileAssetSchema.safeParse(storedAssetPayload);
+      if (!storedAssetResult.success) {
+        throw new Error("Received an invalid stored file asset.");
+      }
+
+      uploadedAssetIds.push(storedAssetResult.data.id);
+    }
+
+    return uploadedAssetIds;
+  }
+
   async function submitTransfer(): Promise<void> {
     const normalizedText = text.trim();
-    if (!normalizedText && !selectedFile) {
+    if (!normalizedText && selectedFiles.length === 0) {
       return;
     }
 
     try {
       setPending(true);
       setErrorMessage(null);
+      const uploadedAssetIds =
+        selectedFiles.length > 0 ? await uploadSelectedFiles() : undefined;
       const response = isFulfillingTransfer
         ? await fetch(`/api/transfers/${requestedCode}/payload`, {
             method: "POST",
@@ -43,6 +99,7 @@ function SendPageContent() {
             body: JSON.stringify({
               payload: {
                 text: normalizedText || undefined,
+                uploadedAssetIds,
               },
             }),
           })
@@ -54,6 +111,7 @@ function SendPageContent() {
             body: JSON.stringify({
               payload: {
                 text: normalizedText || undefined,
+                uploadedAssetIds,
               },
             }),
           });
@@ -122,21 +180,30 @@ function SendPageContent() {
           <div>
             <input
               type="file"
+              multiple
               onChange={(event) => {
-                const nextFile = event.target.files?.[0] ?? null;
-                setSelectedFile(nextFile);
+                const nextFiles = Array.from(event.target.files ?? []);
+                setSelectedFiles(nextFiles);
               }}
               className="block w-full text-sm text-zinc-700 file:mr-4 file:rounded-lg file:border-0 file:bg-zinc-900 file:px-3 file:py-2 file:text-sm file:font-medium file:text-white hover:file:bg-zinc-800"
               aria-label="Select file"
             />
-            {selectedFile ? <p className="mt-2 text-sm text-zinc-600">Selected file: {selectedFile.name}</p> : null}
+            {selectedFiles.length > 0 ? (
+              <div className="mt-2 space-y-1">
+                {selectedFiles.map((selectedFile) => (
+                  <p key={`${selectedFile.name}-${selectedFile.size}`} className="text-sm text-zinc-600">
+                    Selected file: {selectedFile.name}
+                  </p>
+                ))}
+              </div>
+            ) : null}
           </div>
 
           <button
             type="button"
             className="flex h-12 w-full items-center justify-center rounded-xl bg-zinc-900 text-base font-semibold text-white transition hover:bg-zinc-800"
             onClick={submitTransfer}
-            disabled={(!text.trim() && !selectedFile) || pending}
+            disabled={(!text.trim() && selectedFiles.length === 0) || pending}
           >
             {pending ? "Sending..." : "Send"}
           </button>
