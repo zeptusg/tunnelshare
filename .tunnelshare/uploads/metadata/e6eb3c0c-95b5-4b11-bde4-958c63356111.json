@@ -1,0 +1,11 @@
+{
+  "id": "e6eb3c0c-95b5-4b11-bde4-958c63356111",
+  "name": "receiver-file.txt",
+  "sizeBytes": 31,
+  "contentType": "text/plain",
+  "storageKey": "local/e6eb3c0c-95b5-4b11-bde4-958c63356111/receiver-file.txt",
+  "createdAt": "2026-03-22T17:43:42.678Z",
+  "expiresAt": "2026-03-22T17:53:42.678Z",
+  "uploadPath": "/Users/zeptus/Projects/tunnelshare/.tunnelshare/uploads/local/e6eb3c0c-95b5-4b11-bde4-958c63356111/receiver-file.txt",
+  "hasBytes": true
+}
