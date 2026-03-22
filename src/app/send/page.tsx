@@ -12,6 +12,10 @@ import {
   transferActionResponseSchema,
 } from "@/lib/transfer-client";
 
+function getFileIdentity(file: File): string {
+  return [file.name, file.size, file.lastModified].join(":");
+}
+
 function SendPageContent() {
   const searchParams = useSearchParams();
   const [text, setText] = useState("");
@@ -28,6 +32,34 @@ function SendPageContent() {
     setCopied(false);
     setErrorMessage(null);
   }, [requestedCode]);
+
+  function addSelectedFiles(nextFiles: File[]): void {
+    setSelectedFiles((currentFiles) => {
+      const mergedFiles = [...currentFiles];
+      const seenFiles = new Set(currentFiles.map(getFileIdentity));
+
+      for (const nextFile of nextFiles) {
+        const fileIdentity = getFileIdentity(nextFile);
+        if (seenFiles.has(fileIdentity)) {
+          continue;
+        }
+
+        seenFiles.add(fileIdentity);
+        mergedFiles.push(nextFile);
+      }
+
+      return mergedFiles;
+    });
+  }
+
+  function removeSelectedFile(fileToRemove: File): void {
+    const fileIdentityToRemove = getFileIdentity(fileToRemove);
+    setSelectedFiles((currentFiles) =>
+      currentFiles.filter(
+        (currentFile) => getFileIdentity(currentFile) !== fileIdentityToRemove
+      )
+    );
+  }
 
   async function uploadSelectedFiles(): Promise<string[]> {
     const uploadedAssetIds: string[] = [];
@@ -183,17 +215,31 @@ function SendPageContent() {
               multiple
               onChange={(event) => {
                 const nextFiles = Array.from(event.target.files ?? []);
-                setSelectedFiles(nextFiles);
+                addSelectedFiles(nextFiles);
+                event.target.value = "";
               }}
               className="block w-full text-sm text-zinc-700 file:mr-4 file:rounded-lg file:border-0 file:bg-zinc-900 file:px-3 file:py-2 file:text-sm file:font-medium file:text-white hover:file:bg-zinc-800"
               aria-label="Select file"
             />
             {selectedFiles.length > 0 ? (
-              <div className="mt-2 space-y-1">
+              <div className="mt-3 space-y-2">
                 {selectedFiles.map((selectedFile) => (
-                  <p key={`${selectedFile.name}-${selectedFile.size}`} className="text-sm text-zinc-600">
-                    Selected file: {selectedFile.name}
-                  </p>
+                  <div
+                    key={getFileIdentity(selectedFile)}
+                    className="flex items-center justify-between rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2"
+                  >
+                    <p className="pr-3 text-sm text-zinc-700">
+                      {selectedFile.name}
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => removeSelectedFile(selectedFile)}
+                      className="rounded-md border border-zinc-300 bg-white px-2 py-1 text-xs font-medium text-zinc-700 transition hover:bg-zinc-100"
+                      aria-label={`Remove ${selectedFile.name}`}
+                    >
+                      Remove
+                    </button>
+                  </div>
                 ))}
               </div>
             ) : null}

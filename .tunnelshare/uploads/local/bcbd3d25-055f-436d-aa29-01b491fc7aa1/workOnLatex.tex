@@ -1,0 +1,131 @@
+\documentclass[a4paper, oneside, final]{scrartcl} % Paper options using the scrartcl class
+
+\usepackage{scrlayer-scrpage} % Provides headers and footers configuration
+\usepackage{titlesec} % Allows creating custom \section's
+\usepackage{marvosym} % Allows the use of symbols
+\usepackage{tabularx,colortbl} % Advanced table configurations
+\usepackage{ebgaramond} % Use the EB Garamond font
+\usepackage{microtype} % To enable letterspacing
+\usepackage{fontawesome5} % for icons 
+
+\titleformat{\section}{\large\scshape\raggedright}{}{0em}{}[\titlerule] % Section formatting
+
+\pagestyle{scrheadings} % Print the headers and footers on all pages
+
+\addtolength{\voffset}{-0.5in} % Adjust the vertical offset - less whitespace at the top of the page
+\addtolength{\textheight}{8cm} % Adjust the text height - less whitespace at the bottom of the page
+
+\newcommand{\gray}{\rowcolor[gray]{.90}} % Custom highlighting for the work experience and education sections
+
+%----------------------------------------------------------------------------------------
+%	FOOTER SECTION
+%----------------------------------------------------------------------------------------
+
+\renewcommand{\headfont}{\normalfont\rmfamily\scshape} % Font settings for footer
+
+
+
+%----------------------------------------------------------------------------------------
+
+\begin{document}
+
+\begin{center} % Center everything in the document
+
+%----------------------------------------------------------------------------------------
+%	HEADER SECTION
+%----------------------------------------------------------------------------------------
+
+{\fontsize{30}{30}\selectfont\scshape\textls[150]{Daniel Svirsky}} % Your name at the top \\
+
+\fontsize{12.5}{15}\selectfont % Letter spacing and font size
+
+
+{\Large\Letter} \textls[80]{danielsvirsky2@gmail.com \ {\Large\Telefon}052-6357807} \\ 
+\faIcon{github} \textls[80]{ github.com/zeptusg \ \ \ \faIcon{linkedin}  linkedin.com/in/daniel-svirsky} \\
+\faIcon{map-marker-alt} \textls[100]{ Petah-Tikva {\large\textperiodcentered} Israel}
+
+
+\vspace{0.5 cm} % Extra whitespace after the large name at the top
+
+%----------------------------------------------------------------------------------------
+%	OBJECTIVE
+%----------------------------------------------------------------------------------------
+
+\section{Professional Summary}
+
+Highly motivated self-learner of computer science. Great at handling pressure and solving problems efficiently. Always looking to learn new skills, take on extra responsibilities, and grow professionally. 
+
+%----------------------------------------------------------------------------------------
+%	EDUCATION
+%----------------------------------------------------------------------------------------
+
+\section{Education}
+
+\begin{tabularx}{0.97\linewidth}{>{\raggedleft\scshape}p{2cm}X}
+\gray Period & \textbf{Aug 2020 --- Present}\\
+\gray            & \textbf{Self learning}\\
+       & • Exercised and studied "Data Structures \& Algorithms in Java" book. \\
+       & • Solving algorithmic problems - CodeWars, LeetCode. \\
+       & • Learned OS and exercised with Bash.  \\ 
+       & • Learned and exercised MySQL. 
+
+\end{tabularx}
+
+\begin{tabularx}{0.97\linewidth}{>{\raggedleft\scshape}p{2cm}X}
+\gray Period & \textbf{Feb 2020 --- May 2020}\\
+\gray Course & \textbf{Operational ICT Technician}\\
+\gray Rank & \textbf{With Honors}\\
+\gray Institute & \textbf{C4I unit of IDF} \hfill Camp Ariel Sharon \\
+       & • Learned about signaling and communicating using radio waves. \\
+       & • Learned about networking components and devices. \\
+       & • Learned about satellite communication.
+
+%& Extra information about degree
+\end{tabularx}
+
+
+\begin{tabularx}{0.97\linewidth}{>{\raggedleft\scshape}p{2cm}X}
+\gray Period & \textbf{Sep 2016 --- Jun 2019}\\
+\gray Major & \textbf{Computer Science}\\
+\gray Extra & \textbf{5 units of Math, 5 units of English}\\
+\gray School & \textbf{Amal-B} \hfill Petah-Tikva, Israel\\
+       & • Learned Assembly and how code is compiled - project on git. \\
+       & • Learned OOP with C\#, good practice of code and algorithmic problem solving. \\
+       & • Learned Python and networking (OSI model, protocols, etc).
+%& Extra information about degree
+\end{tabularx}
+
+%----------------------------------------------------------------------------------------
+%	WORK EXPERIENCE
+%----------------------------------------------------------------------------------------
+
+\section{Experience}
+
+\begin{tabularx}{0.97\linewidth}{>{\raggedleft\scshape}p{2cm}X}
+\gray Period & \textbf{Aug 2019 --- Aug 2021}\\
+\gray Employer & \textbf{IDF}\\
+\gray Job Title & \textbf{Operational ICT Technician}  \hfill Golan Heights, Israel\\
+       & • Worked, dealt with and optimized ICT (Information and Communications Technology) tools and devices. \\
+       & • Installed means of ICT on different platforms and vehicles. \\
+       & • Gave tutorials and lessons about ICT means I was specialized in.
+\end{tabularx}
+
+\vspace{0.5pt}
+
+%----------------------------------------------------------------------------------------
+%	SKILLS
+%----------------------------------------------------------------------------------------
+
+\section{Skills}
+
+\begin{tabular}{ @{} >{\bfseries}l @{\hspace{6ex}} l }
+Computer Languages & Java, Python, C\#, Assembly\\
+Databases & MySQL\\
+Languages & English (Fluent), Hebrew (Native), Russian (Fluent)
+\end{tabular}
+
+%----------------------------------------------------------------------------------------
+
+\end{center}
+
+\end{document}
