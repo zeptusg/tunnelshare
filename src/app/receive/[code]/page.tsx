@@ -27,12 +27,12 @@ export default function ReceiveCodePage() {
     return decodeURIComponent(rawCode).trim().toUpperCase();
   }, [params.code]);
   const readyTextPayload =
-    state.status === "ready" && state.transfer.payload?.type === "text"
-      ? state.transfer.payload
+    state.status === "ready" && typeof state.transfer.payload?.text === "string"
+      ? state.transfer.payload.text
       : null;
   const readyFilesPayload =
-    state.status === "ready" && state.transfer.payload?.type === "files"
-      ? state.transfer.payload
+    state.status === "ready" && Array.isArray(state.transfer.payload?.files)
+      ? state.transfer.payload.files
       : null;
 
   useEffect(() => {
@@ -174,12 +174,12 @@ export default function ReceiveCodePage() {
           {readyTextPayload ? (
             <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-4 sm:p-5">
               <p className="whitespace-pre-wrap break-words text-base leading-7 text-zinc-900 sm:text-lg">
-                {readyTextPayload.content}
+                {readyTextPayload}
               </p>
               <div className="mt-4 flex items-center gap-3">
                 <button
                   type="button"
-                  onClick={() => copyText(readyTextPayload.content)}
+                  onClick={() => copyText(readyTextPayload)}
                   className="rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm font-medium text-zinc-900 transition hover:bg-zinc-100"
                 >
                   Copy text
@@ -193,7 +193,7 @@ export default function ReceiveCodePage() {
             <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-4 sm:p-5">
               <p className="text-sm font-semibold text-zinc-900">Files received</p>
               <ul className="mt-3 space-y-2">
-                {readyFilesPayload.content.map((file) => (
+                {readyFilesPayload.map((file) => (
                   <li key={file.id} className="rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-700">
                     {file.name}
                   </li>

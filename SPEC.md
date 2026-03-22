@@ -12,6 +12,7 @@ No accounts are required. Transfers are temporary and expire automatically.
 TunnelShare is designed to support **multiple payload types** in the future.  
 The first implemented slice supports **text sharing**, with **file sharing planned next**.  
 File transfer should be designed as a **file collection** model so single-file and multi-file sharing use the same domain contract.
+The transfer payload model should also allow **text and files together** in the same transfer.
 
 
 ## Core Concept
@@ -94,8 +95,11 @@ Transfer object:
   code: string
   status: "awaiting_payload" | "ready" | "consumed" | "expired"
   initiatedBy: "sender" | "receiver"
-  payloadType?: "text" | "files"
-  payload?: string | fileReference[]
+  payload?: {
+    text?: string
+    files?: fileReference[]
+    metadata?: Record<string, unknown>
+  }
   receiveUrl: string
   sendUrl?: string
   expiresAt: timestamp
@@ -106,6 +110,8 @@ Rules:
 - `awaiting_payload` transfers do not contain payload
 - `ready` transfers always contain payload
 - `consumed` and `expired` are terminal states
+- payloads may contain text, files, or both
+- at least one of `payload.text` or `payload.files` must be present when payload exists
 - file payloads should use an array-based reference model, even for a single file
 
 Transfers are stored in Redis with TTL.
@@ -127,12 +133,14 @@ Target route: POST `/api/transfers`
 Sender-first request (text sharing):
 
 {
-  text: string
+  payload: {
+    text: string
+  }
 }
 
 Validation:
-- text is required
-- text length must be <= MAX_TEXT_BYTES
+- at least one of `payload.text` or `payload.files` is required
+- if `payload.text` exists, its length must be <= MAX_TEXT_BYTES
 
 Receiver-first request:
 
@@ -147,7 +155,18 @@ multipart/form-data upload with file metadata.
 Future file payload contract:
 
 {
-  files: fileReference[]
+  payload: {
+    files: fileReference[]
+  }
+}
+
+Future mixed payload contract:
+
+{
+  payload: {
+    text?: string
+    files?: fileReference[]
+  }
 }
 
 Sender-first response:
@@ -175,8 +194,10 @@ Response:
 {
   code: string
   status: string
-  payloadType?: string
-  payload?: string | fileReference
+  payload?: {
+    text?: string
+    files?: fileReference[]
+  }
   expiresAt: timestamp
 }
 
@@ -191,14 +212,17 @@ Target route: POST `/api/transfers/[code]/payload`
 Request:
 
 {
-  text: string
+  payload: {
+    text?: string
+    files?: fileReference[]
+  }
 }
 
 Behavior:
 - validates payload input
 - attaches payload to an `awaiting_payload` transfer
 - moves the transfer to `ready`
-- supports text now and should later support file collections through the same endpoint family
+- supports text-only now and should later support files-only or mixed payloads through the same endpoint family
 
 
 ## UI Pages
@@ -213,7 +237,7 @@ Entry page with two options:
 ### Send Page
 
 Components:
-- input for text (initial version)
+- input for text
 - file upload (future, designed for one or many files)
 - Send button
 
@@ -243,8 +267,8 @@ Redirects to:
 ### Receive Transfer Page
 
 Displays:
-- shared text OR
-- downloadable file list
+- shared text when present
+- downloadable file list when present
 
 States:
 - awaiting payload
@@ -261,8 +285,9 @@ Errors:
 
 Planned extensions:
 
-- File transfer support
+- Real file upload and download support
 - Multiple file sharing
+- Mixed text + file sending in one composed UI
 - End-to-end encryption
 - Device pairing
 - Clipboard integration

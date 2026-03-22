@@ -23,24 +23,26 @@ export type TransferStatus = z.infer<typeof transferStatusSchema>;
 export const transferInitiatedBySchema = z.enum(["sender", "receiver"]);
 export type TransferInitiatedBy = z.infer<typeof transferInitiatedBySchema>;
 
-export const transferTextPayloadSchema = z.object({
-  type: z.literal("text"),
-  content: z.string(),
-  metadata: z.record(z.string(), z.unknown()).optional(),
-});
-export type TransferTextPayload = z.infer<typeof transferTextPayloadSchema>;
+export const transferPayloadSchema = z
+  .object({
+    text: z.string().optional(),
+    files: z
+      .array(fileReferenceSchema)
+      .min(1, "At least one file is required")
+      .optional(),
+    metadata: z.record(z.string(), z.unknown()).optional(),
+  })
+  .superRefine((payload, ctx) => {
+    const hasText = typeof payload.text === "string" && payload.text.length > 0;
+    const hasFiles = Array.isArray(payload.files) && payload.files.length > 0;
 
-export const transferFilesPayloadSchema = z.object({
-  type: z.literal("files"),
-  content: z.array(fileReferenceSchema).min(1, "At least one file is required"),
-  metadata: z.record(z.string(), z.unknown()).optional(),
-});
-export type TransferFilesPayload = z.infer<typeof transferFilesPayloadSchema>;
-
-export const transferPayloadSchema = z.discriminatedUnion("type", [
-  transferTextPayloadSchema,
-  transferFilesPayloadSchema,
-]);
+    if (!hasText && !hasFiles) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Transfer payload must include text, files, or both",
+      });
+    }
+  });
 export type TransferPayload = z.infer<typeof transferPayloadSchema>;
 
 export const transferBaseSchema = z.object({

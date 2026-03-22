@@ -12,8 +12,7 @@ test("awaiting transfer can be fulfilled and becomes ready", async ({ request })
   const fulfillResponse = await request.post(`/api/transfers/${created.code}/payload`, {
     data: {
       payload: {
-        type: "text",
-        content: "fulfilled through api test",
+        text: "fulfilled through api test",
       },
     },
   });
@@ -33,8 +32,7 @@ test("awaiting transfer can be fulfilled and becomes ready", async ({ request })
     code: created.code,
     status: "ready",
     payload: {
-      type: "text",
-      content: "fulfilled through api test",
+      text: "fulfilled through api test",
     },
   });
 });

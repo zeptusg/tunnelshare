@@ -6,8 +6,7 @@ test("sender-first transfer create returns ready transfer and can be fetched", a
   const createResponse = await request.post("/api/transfers", {
     data: {
       payload: {
-        type: "text",
-        content: "api sender-first coverage",
+        text: "api sender-first coverage",
       },
     },
   });
@@ -29,8 +28,7 @@ test("sender-first transfer create returns ready transfer and can be fetched", a
     code: created.code,
     status: "ready",
     payload: {
-      type: "text",
-      content: "api sender-first coverage",
+      text: "api sender-first coverage",
     },
   });
   expect(transfer.sendUrl).toBeUndefined();

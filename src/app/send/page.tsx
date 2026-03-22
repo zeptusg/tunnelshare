@@ -27,7 +27,7 @@ function SendPageContent() {
 
   async function submitTransfer(): Promise<void> {
     const normalizedText = text.trim();
-    if (!normalizedText) {
+    if (!normalizedText && !selectedFile) {
       return;
     }
 
@@ -42,8 +42,7 @@ function SendPageContent() {
             },
             body: JSON.stringify({
               payload: {
-                type: "text",
-                content: normalizedText,
+                text: normalizedText || undefined,
               },
             }),
           })
@@ -54,8 +53,7 @@ function SendPageContent() {
             },
             body: JSON.stringify({
               payload: {
-                type: "text",
-                content: normalizedText,
+                text: normalizedText || undefined,
               },
             }),
           });
@@ -138,7 +136,7 @@ function SendPageContent() {
             type="button"
             className="flex h-12 w-full items-center justify-center rounded-xl bg-zinc-900 text-base font-semibold text-white transition hover:bg-zinc-800"
             onClick={submitTransfer}
-            disabled={!text.trim() || pending}
+            disabled={(!text.trim() && !selectedFile) || pending}
           >
             {pending ? "Sending..." : "Send"}
           </button>

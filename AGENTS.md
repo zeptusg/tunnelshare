@@ -69,12 +69,21 @@ Transfer model:
   code: string
   status: "awaiting_payload" | "ready" | "consumed" | "expired"
   initiatedBy: "sender" | "receiver"
-  payloadType?: "text" | "files"
-  payload?: string | fileReference[]
+  payload?: {
+    text?: string
+    files?: fileReference[]
+    metadata?: Record<string, unknown>
+  }
   receiveUrl: string
   sendUrl?: string
   expiresAt: timestamp
 }
+
+Payload rules:
+
+- A payload may contain text, files, or both.
+- At least one of `payload.text` or `payload.files` must be present when a payload exists.
+- If `payload.files` is present, it must contain at least one file reference.
 
 Coordination rules:
 
