@@ -5,15 +5,17 @@
 - Home navigation (`/` -> Send/Receive)
 - Sender-first transfer creation from `/send`
 - Receiver-first transfer creation from `/receive`
+- Sender-first and receiver-first local file transfer behavior
+- Mixed payload behavior (`text`, `files`, or both)
 - Transfer retrieval via QR URL and manual code entry
 - Code normalization and query redirect behavior
 - Transfer status transitions: `awaiting_payload` -> `ready`
 - Polling behavior while transfer is `awaiting_payload`
+- Local upload target and local file retrieval routes
 - TTL-based expiry handling
 - Redis health endpoint sanity check
 
 ### Out of Scope
-- Real file byte transfer behavior
 - SSE/WebSocket transport
 - Auth/encryption/device pairing features
 - Native mobile wrappers
@@ -42,7 +44,8 @@
 - **Flow divergence:** assert both entry flows converge on the same ready-state retrieval behavior.
 - **QR/manual mismatch:** verify manual code entry and QR routes resolve the same transfer.
 - **Polling regressions:** assert waiting clients update correctly without requiring manual refresh.
-- **Future file shape churn:** lock the domain contract around file collections before file upload work begins.
+- **Upload/storage drift:** keep upload-route tests and transfer-route tests separate so file ingestion and payload assembly can fail independently.
+- **Future file shape churn:** lock the domain contract around mixed payloads and file references before cloud storage work begins.
 
 ## Deliverables
 - `docs/transfer-architecture-spec.md`
