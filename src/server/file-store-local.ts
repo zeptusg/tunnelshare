@@ -65,6 +65,12 @@ export async function writeLocalUploadBytes(
   await writeFile(record.uploadPath, bytes);
 }
 
+export async function readLocalUploadBytes(assetId: string): Promise<Uint8Array> {
+  const record = await readLocalAssetRecord(assetId);
+  const fileBytes = await readFile(record.uploadPath);
+  return new Uint8Array(fileBytes);
+}
+
 function buildStoredFileAsset(record: LocalAssetRecord): StoredFileAsset {
   return storedFileAssetSchema.parse({
     id: record.id,

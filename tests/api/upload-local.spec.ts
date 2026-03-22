@@ -41,4 +41,9 @@ test("local upload target accepts bytes and returns stored file asset", async ({
     contentType: "text/plain",
     storageKey: uploadTarget.storageKey,
   });
+
+  const downloadResponse = await request.get(`/api/files/local/${storedAsset.id}`);
+  expect(downloadResponse.status()).toBe(200);
+  expect(downloadResponse.headers()["content-type"]).toContain("text/plain");
+  expect(await downloadResponse.text()).toBe(fileContent);
 });
