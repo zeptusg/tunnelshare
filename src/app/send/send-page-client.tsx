@@ -10,8 +10,61 @@ import {
   transferActionResponseSchema,
 } from "@/lib/transfer-client";
 
+type UploadStatus = "idle" | "queued" | "uploading" | "uploaded" | "error";
+
 function getFileIdentity(file: File): string {
   return [file.name, file.size, file.lastModified].join(":");
+}
+
+function uploadFileBytesWithProgress(params: {
+  url: string;
+  method: string;
+  headers: Record<string, string>;
+  file: File;
+  onProgress: (progressPercent: number) => void;
+}): Promise<unknown> {
+  const { url, method, headers, file, onProgress } = params;
+
+  return new Promise((resolve, reject) => {
+    const request = new XMLHttpRequest();
+    request.open(method, url);
+
+    for (const [headerName, headerValue] of Object.entries(headers)) {
+      request.setRequestHeader(headerName, headerValue);
+    }
+
+    request.upload.onprogress = (event) => {
+      if (!event.lengthComputable) {
+        return;
+      }
+
+      onProgress(Math.round((event.loaded / event.total) * 100));
+    };
+
+    request.onerror = () => {
+      reject(new Error(`Could not upload ${file.name}. Please try again.`));
+    };
+
+    request.onload = () => {
+      let responseData: unknown = null;
+
+      try {
+        responseData = request.responseText ? JSON.parse(request.responseText) : null;
+      } catch {
+        reject(new Error("Received an invalid stored file asset."));
+        return;
+      }
+
+      if (request.status < 200 || request.status >= 300) {
+        reject(new Error(`Could not upload ${file.name}. Please try again.`));
+        return;
+      }
+
+      resolve(responseData);
+    };
+
+    request.send(file);
+  });
 }
 
 function getUploadErrorMessage(
@@ -51,6 +104,9 @@ function SendPageContent({
   const [copied, setCopied] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
+  const [uploadProgressByFile, setUploadProgressByFile] = useState<
+    Record<string, { progressPercent: number; status: UploadStatus }>
+  >({});
   const requestedCode = searchParams.get("code")?.trim().toUpperCase() ?? "";
   const isFulfillingTransfer = requestedCode.length > 0;
 
@@ -59,6 +115,27 @@ function SendPageContent({
     setCopied(false);
     setErrorMessage(null);
   }, [requestedCode]);
+
+  function updateUploadProgress(
+    fileIdentity: string,
+    nextState: { progressPercent?: number; status?: UploadStatus }
+  ): void {
+    setUploadProgressByFile((currentState) => {
+      const previousState = currentState[fileIdentity] ?? {
+        progressPercent: 0,
+        status: "idle" as UploadStatus,
+      };
+
+      return {
+        ...currentState,
+        [fileIdentity]: {
+          progressPercent:
+            nextState.progressPercent ?? previousState.progressPercent,
+          status: nextState.status ?? previousState.status,
+        },
+      };
+    });
+  }
 
   function addSelectedFiles(nextFiles: File[]): void {
     setSelectedFiles((currentFiles) => {
@@ -88,6 +165,11 @@ function SendPageContent({
 
   function removeSelectedFile(fileToRemove: File): void {
     const fileIdentityToRemove = getFileIdentity(fileToRemove);
+    setUploadProgressByFile((currentState) => {
+      const remainingState = { ...currentState };
+      delete remainingState[fileIdentityToRemove];
+      return remainingState;
+    });
     setSelectedFiles((currentFiles) =>
       currentFiles.filter(
         (currentFile) => getFileIdentity(currentFile) !== fileIdentityToRemove
@@ -99,6 +181,12 @@ function SendPageContent({
     const uploadedAssetIds: string[] = [];
 
     for (const selectedFile of selectedFiles) {
+      const fileIdentity = getFileIdentity(selectedFile);
+      updateUploadProgress(fileIdentity, {
+        progressPercent: 0,
+        status: "queued",
+      });
+
       const createUploadResponse = await fetch("/api/uploads", {
         method: "POST",
         headers: {
@@ -126,25 +214,44 @@ function SendPageContent({
 
       const uploadTargetResult = uploadTargetSchema.safeParse(uploadTargetPayload);
       if (!uploadTargetResult.success) {
+        updateUploadProgress(fileIdentity, { status: "error" });
         throw new Error("Received an invalid upload target.");
       }
 
-      const uploadResponse = await fetch(uploadTargetResult.data.uploadUrl, {
-        method: uploadTargetResult.data.uploadMethod,
-        headers: uploadTargetResult.data.headers,
-        body: selectedFile,
+      updateUploadProgress(fileIdentity, {
+        progressPercent: 0,
+        status: "uploading",
       });
 
-      const storedAssetPayload: unknown = await uploadResponse.json();
-      if (!uploadResponse.ok) {
-        throw new Error(`Could not upload ${selectedFile.name}. Please try again.`);
+      let storedAssetPayload: unknown;
+      try {
+        storedAssetPayload = await uploadFileBytesWithProgress({
+          url: uploadTargetResult.data.uploadUrl,
+          method: uploadTargetResult.data.uploadMethod,
+          headers: uploadTargetResult.data.headers,
+          file: selectedFile,
+          onProgress: (progressPercent) => {
+            updateUploadProgress(fileIdentity, {
+              progressPercent,
+              status: "uploading",
+            });
+          },
+        });
+      } catch (error) {
+        updateUploadProgress(fileIdentity, { status: "error" });
+        throw error;
       }
 
       const storedAssetResult = storedFileAssetSchema.safeParse(storedAssetPayload);
       if (!storedAssetResult.success) {
+        updateUploadProgress(fileIdentity, { status: "error" });
         throw new Error("Received an invalid stored file asset.");
       }
 
+      updateUploadProgress(fileIdentity, {
+        progressPercent: 100,
+        status: "uploaded",
+      });
       uploadedAssetIds.push(storedAssetResult.data.id);
     }
 
@@ -271,19 +378,61 @@ function SendPageContent({
                 {selectedFiles.map((selectedFile) => (
                   <div
                     key={getFileIdentity(selectedFile)}
-                    className="flex items-center justify-between rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2"
+                    className="rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2"
                   >
-                    <p className="pr-3 text-sm text-zinc-700">
-                      {selectedFile.name}
-                    </p>
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate pr-3 text-sm text-zinc-700">
+                          {selectedFile.name}
+                        </p>
+                        {uploadProgressByFile[getFileIdentity(selectedFile)] ? (
+                          <p className="mt-1 text-xs text-zinc-500">
+                            {uploadProgressByFile[getFileIdentity(selectedFile)]
+                              .status === "queued"
+                              ? "Queued"
+                              : uploadProgressByFile[getFileIdentity(selectedFile)]
+                                    .status === "uploading"
+                                ? `Uploading ${uploadProgressByFile[getFileIdentity(selectedFile)].progressPercent}%`
+                                : uploadProgressByFile[getFileIdentity(selectedFile)]
+                                      .status === "uploaded"
+                                  ? "Uploaded"
+                                  : "Upload failed"}
+                          </p>
+                        ) : null}
+                      </div>
                     <button
                       type="button"
                       onClick={() => removeSelectedFile(selectedFile)}
                       className="rounded-md border border-zinc-300 bg-white px-2 py-1 text-xs font-medium text-zinc-700 transition hover:bg-zinc-100"
                       aria-label={`Remove ${selectedFile.name}`}
+                      disabled={pending}
                     >
                       Remove
                     </button>
+                    </div>
+                    {uploadProgressByFile[getFileIdentity(selectedFile)] &&
+                    uploadProgressByFile[getFileIdentity(selectedFile)].status !==
+                      "idle" ? (
+                      <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-zinc-200">
+                        <div
+                          className={`h-full rounded-full transition-all ${
+                            uploadProgressByFile[getFileIdentity(selectedFile)]
+                              .status === "error"
+                              ? "bg-red-500"
+                              : "bg-zinc-900"
+                          }`}
+                          style={{
+                            width: `${
+                              uploadProgressByFile[getFileIdentity(selectedFile)]
+                                .status === "error"
+                                ? 100
+                                : uploadProgressByFile[getFileIdentity(selectedFile)]
+                                    .progressPercent
+                            }%`,
+                          }}
+                        />
+                      </div>
+                    ) : null}
                   </div>
                 ))}
               </div>
