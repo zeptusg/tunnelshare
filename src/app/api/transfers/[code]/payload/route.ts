@@ -1,8 +1,13 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { config } from "@/lib/config";
-import { transferSchema, transferPayloadSchema } from "@/lib/types";
+import { transferSchema } from "@/lib/types";
+import { createLocalFileStore } from "@/server/file-store-local";
 import { getStoredTransfer, saveTransfer } from "@/server/transfer-store";
+import {
+  resolveTransferPayload,
+  transferPayloadInputSchema,
+} from "@/server/transfer-payloads";
 import {
   fulfillTransferWithPayload,
   isTransferExpired,
@@ -23,7 +28,7 @@ const normalizedCodeSchema = z
 
 const fulfillTransferRequestSchema = z
   .object({
-    payload: transferPayloadSchema,
+    payload: transferPayloadInputSchema,
   })
   .superRefine((value, ctx) => {
     if (
@@ -37,6 +42,8 @@ const fulfillTransferRequestSchema = z
       });
     }
   });
+
+const fileStore = createLocalFileStore();
 
 const fulfillTransferResponseSchema = z.object({
   code: z.string().min(1),
@@ -85,9 +92,13 @@ export async function POST(
       return NextResponse.json(CONFLICT_RESPONSE, { status: 409 });
     }
 
+    const resolvedPayload = await resolveTransferPayload(
+      fileStore,
+      requestResult.data.payload
+    );
     const fulfilledTransfer = fulfillTransferWithPayload({
       transfer: transferResult.data,
-      payload: requestResult.data.payload,
+      payload: resolvedPayload,
     });
 
     await saveTransfer(fulfilledTransfer, config.sessionTtlSeconds);

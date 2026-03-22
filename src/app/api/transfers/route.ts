@@ -2,8 +2,12 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { generateCode } from "@/lib/code";
 import { config } from "@/lib/config";
-import { transferPayloadSchema } from "@/lib/types";
+import { createLocalFileStore } from "@/server/file-store-local";
 import { saveTransfer } from "@/server/transfer-store";
+import {
+  resolveTransferPayload,
+  transferPayloadInputSchema,
+} from "@/server/transfer-payloads";
 import {
   createAwaitingTransfer,
   createReadyTransfer,
@@ -22,7 +26,7 @@ type CreateTransferResponse = z.infer<typeof createTransferResponseSchema>;
 const createTransferRequestSchema = z
   .union([
     z.object({
-      payload: transferPayloadSchema,
+      payload: transferPayloadInputSchema,
     }),
     z.object({
       intent: z.literal("receive"),
@@ -41,6 +45,8 @@ const createTransferRequestSchema = z
       });
     }
   });
+
+const fileStore = createLocalFileStore();
 
 export async function POST(
   request: Request
@@ -62,11 +68,15 @@ export async function POST(
     const receiveUrl = new URL(`/receive/${code}`, config.appUrl).toString();
 
     if ("payload" in requestResult.data) {
+      const resolvedPayload = await resolveTransferPayload(
+        fileStore,
+        requestResult.data.payload
+      );
       const transfer = createReadyTransfer({
         code,
         ttlSeconds: config.sessionTtlSeconds,
         receiveUrl,
-        payload: requestResult.data.payload,
+        payload: resolvedPayload,
       });
 
       await saveTransfer(transfer, config.sessionTtlSeconds);
