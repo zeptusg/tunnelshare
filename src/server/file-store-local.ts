@@ -10,11 +10,13 @@ import type {
   DeleteStoredFileParams,
   FileStore,
   FinalizeUploadParams,
+  GetStoredFileAssetParams,
 } from "@/server/file-store";
 import {
   createUploadTargetParamsSchema,
   deleteStoredFileParamsSchema,
   finalizeUploadParamsSchema,
+  getStoredFileAssetParamsSchema,
 } from "@/server/file-store";
 
 const LOCAL_UPLOAD_ROOT = path.join(process.cwd(), ".tunnelshare", "uploads");
@@ -146,6 +148,14 @@ export function createLocalFileStore(): FileStore {
         });
       }
 
+      return buildStoredFileAsset(record);
+    },
+
+    async getStoredFileAsset(
+      params: GetStoredFileAssetParams
+    ): Promise<StoredFileAsset> {
+      const { assetId } = getStoredFileAssetParamsSchema.parse(params);
+      const record = await readLocalAssetRecord(assetId);
       return buildStoredFileAsset(record);
     },
 

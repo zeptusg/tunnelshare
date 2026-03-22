@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { readLocalAssetRecord, readLocalUploadBytes } from "@/server/file-store-local";
+import { createLocalFileStore, readLocalUploadBytes } from "@/server/file-store-local";
 
 const normalizedAssetIdSchema = z.string().uuid("assetId must be a valid UUID");
+const fileStore = createLocalFileStore();
 
 export async function GET(
   _request: Request,
@@ -17,16 +18,18 @@ export async function GET(
     }
 
     try {
-      const record = await readLocalAssetRecord(assetIdResult.data);
+      const asset = await fileStore.getStoredFileAsset({
+        assetId: assetIdResult.data,
+      });
       const fileBytes = await readLocalUploadBytes(assetIdResult.data);
       const responseBody = Buffer.from(fileBytes);
 
       return new Response(responseBody, {
         status: 200,
         headers: {
-          "content-type": record.contentType,
+          "content-type": asset.contentType,
           "content-length": String(responseBody.byteLength),
-          "content-disposition": `inline; filename="${record.name}"`,
+          "content-disposition": `inline; filename="${asset.name}"`,
         },
       });
     } catch {

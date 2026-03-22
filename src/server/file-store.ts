@@ -21,6 +21,13 @@ export const finalizeUploadParamsSchema = z.object({
 });
 export type FinalizeUploadParams = z.input<typeof finalizeUploadParamsSchema>;
 
+export const getStoredFileAssetParamsSchema = z.object({
+  assetId: z.string().min(1, "Asset id cannot be empty"),
+});
+export type GetStoredFileAssetParams = z.input<
+  typeof getStoredFileAssetParamsSchema
+>;
+
 export const deleteStoredFileParamsSchema = z.object({
   storageKey: z.string().min(1, "storageKey cannot be empty"),
 });
@@ -33,6 +40,7 @@ export type DeleteStoredFileParams = z.input<
 export interface FileStore {
   createUploadTarget(params: CreateUploadTargetParams): Promise<UploadTarget>;
   finalizeUpload(params: FinalizeUploadParams): Promise<StoredFileAsset>;
+  getStoredFileAsset(params: GetStoredFileAssetParams): Promise<StoredFileAsset>;
   getDownloadUrl(asset: StoredFileAsset): Promise<string>;
   deleteStoredFile(params: DeleteStoredFileParams): Promise<void>;
 }
