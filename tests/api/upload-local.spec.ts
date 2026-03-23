@@ -33,7 +33,11 @@ test("local upload target accepts bytes and returns stored file asset", async ({
   });
 
   expect(uploadResponse.status()).toBe(200);
-  const storedAsset = await uploadResponse.json();
+  await expect(uploadResponse.json()).resolves.toMatchObject({ ok: true });
+
+  const finalizeResponse = await request.post(uploadTarget.completeUrl);
+  expect(finalizeResponse.status()).toBe(200);
+  const storedAsset = await finalizeResponse.json();
   expect(storedAsset).toMatchObject({
     id: uploadTarget.assetId,
     name: "sample.txt",

@@ -118,6 +118,7 @@ export function createLocalFileStore(): FileStore {
         assetId,
         storageKey,
         uploadUrl: new URL(`/api/uploads/local/${assetId}`, config.appUrl).toString(),
+        completeUrl: new URL(`/api/uploads/${assetId}/complete`, config.appUrl).toString(),
         uploadMethod: "PUT",
         headers: {
           "content-type": file.contentType,

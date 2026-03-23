@@ -1,15 +1,16 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { createLocalFileStore, writeLocalUploadBytes } from "@/server/file-store-local";
+import { storedFileAssetSchema } from "@/lib/file-assets";
+import { createFileStore } from "@/server/file-store-factory";
 
 const normalizedAssetIdSchema = z.string().uuid("assetId must be a valid UUID");
 
-createLocalFileStore();
+const fileStore = createFileStore();
 
-export async function PUT(
-  request: Request,
+export async function POST(
+  _request: Request,
   context: { params: Promise<{ assetId: string }> }
-): Promise<NextResponse<{ ok: true } | { error: string }>> {
+): Promise<NextResponse<ReturnType<typeof storedFileAssetSchema.parse> | { error: string }>> {
   try {
     const { assetId: rawAssetId } = await context.params;
     const assetIdResult = normalizedAssetIdSchema.safeParse(rawAssetId);
@@ -19,17 +20,18 @@ export async function PUT(
     }
 
     try {
-      const body = await request.arrayBuffer();
-      const uploadBytes = new Uint8Array(body);
+      const storedAsset = await fileStore.finalizeUpload({
+        assetId: assetIdResult.data,
+      });
 
-      await writeLocalUploadBytes(assetIdResult.data, uploadBytes);
-
-      return NextResponse.json({ ok: true }, { status: 200 });
+      return NextResponse.json(storedFileAssetSchema.parse(storedAsset), {
+        status: 200,
+      });
     } catch {
       return NextResponse.json({ error: "not_found" }, { status: 404 });
     }
   } catch (error) {
-    console.error("Failed to upload local file asset", error);
+    console.error("Failed to finalize uploaded file asset", error);
     return NextResponse.json({ error: "internal_error" }, { status: 500 });
   }
 }

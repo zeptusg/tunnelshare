@@ -242,6 +242,16 @@ function SendPageContent({
         throw error;
       }
 
+      const finalizeUploadResponse = await fetch(uploadTargetResult.data.completeUrl, {
+        method: "POST",
+      });
+
+      storedAssetPayload = await finalizeUploadResponse.json();
+      if (!finalizeUploadResponse.ok) {
+        updateUploadProgress(fileIdentity, { status: "error" });
+        throw new Error(`Could not finalize ${selectedFile.name}. Please try again.`);
+      }
+
       const storedAssetResult = storedFileAssetSchema.safeParse(storedAssetPayload);
       if (!storedAssetResult.success) {
         updateUploadProgress(fileIdentity, { status: "error" });
