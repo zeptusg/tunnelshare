@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { generateCode } from "@/lib/code";
 import { config } from "@/lib/config";
-import { createLocalFileStore } from "@/server/file-store-local";
+import { createFileStore } from "@/server/file-store-factory";
 import { saveTransfer } from "@/server/transfer-store";
 import {
   resolveTransferPayload,
@@ -46,7 +46,7 @@ const createTransferRequestSchema = z
     }
   });
 
-const fileStore = createLocalFileStore();
+const fileStore = createFileStore();
 
 export async function POST(
   request: Request

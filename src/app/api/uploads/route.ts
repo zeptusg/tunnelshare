@@ -8,13 +8,13 @@ import {
   validateSelectedFileForUpload,
   type UploadTarget,
 } from "@/lib/file-assets";
-import { createLocalFileStore } from "@/server/file-store-local";
+import { createFileStore } from "@/server/file-store-factory";
 
 const createUploadRequestSchema = z.object({
   file: selectedFileSchema,
 });
 
-const fileStore = createLocalFileStore();
+const fileStore = createFileStore();
 
 export async function POST(
   request: Request

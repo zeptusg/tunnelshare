@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { config } from "@/lib/config";
 import { transferSchema } from "@/lib/types";
-import { createLocalFileStore } from "@/server/file-store-local";
+import { createFileStore } from "@/server/file-store-factory";
 import { getStoredTransfer, saveTransfer } from "@/server/transfer-store";
 import {
   resolveTransferPayload,
@@ -43,7 +43,7 @@ const fulfillTransferRequestSchema = z
     }
   });
 
-const fileStore = createLocalFileStore();
+const fileStore = createFileStore();
 
 const fulfillTransferResponseSchema = z.object({
   code: z.string().min(1),

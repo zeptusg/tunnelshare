@@ -4,6 +4,7 @@ import { defaultMaxUploadFileBytes } from "@/lib/upload-policy";
 const configSchema = z.object({
     appUrl: z.string().url("APP_URL must be a valid URL"),
     redisUrl: z.string().url("REDIS_URL must be a valid URL"),
+    fileStorageDriver: z.enum(["local", "supabase"]).default("local"),
     sessionTtlSeconds: z.coerce
         .number()
         .int("SESSION_TTL_SECONDS must be an integer")
@@ -30,6 +31,7 @@ function loadConfig(): Config {
     const raw = {
         appUrl: process.env.APP_URL,
         redisUrl: process.env.REDIS_URL,
+        fileStorageDriver: process.env.FILE_STORAGE_DRIVER,
         sessionTtlSeconds: process.env.SESSION_TTL_SECONDS,
         maxTextBytes: process.env.MAX_TEXT_BYTES,
         maxUploadFileBytes: process.env.MAX_UPLOAD_FILE_BYTES,
