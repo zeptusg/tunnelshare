@@ -108,6 +108,8 @@ Acceptance:
 - Keep transfer ownership and file metadata models compatible with a future user/account system
 - Keep storage and metadata access behind abstractions that are safe for serverless deployment
 - Avoid local filesystem assumptions in core transfer logic
+- Keep Redis focused on ephemeral transfer state; treat object storage as the source of file bytes
+- Plan durable asset metadata so it can move to a database-backed model before or alongside account features
 
 Acceptance:
 - Anonymous flow continues to work unchanged.

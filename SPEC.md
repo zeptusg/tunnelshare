@@ -43,6 +43,8 @@ Important rules:
 - Waiting transfers use polling first. SSE or WebSockets can be added later on top of the same transfer lifecycle.
 - File uploads and transfer state are separate concerns: uploads prepare assets, transfers reference them.
 - Storage and upload handling should remain abstract enough to support serverless deployment and future cloud storage backends.
+- Raw file bytes should live in object storage; transfers and codes remain short-lived Redis records.
+- Durable asset metadata may begin minimally, but the design should allow moving metadata into a database later without changing transfer payloads.
 
 
 ## Core Flow
@@ -117,6 +119,7 @@ Rules:
 - file payloads should use an array-based reference model, even for a single file
 
 Transfers are stored in Redis with TTL.
+File bytes are stored outside Redis in object storage or a storage adapter suitable for serverless deployment.
 
 Compatibility note:
 
@@ -125,6 +128,7 @@ Compatibility note:
 
 For file sharing, the payload will reference one or more stored files instead of containing file bytes directly.
 Upload progress for one or many files should be handled outside the transfer state machine so retries or slower files do not corrupt transfer state.
+Future account ownership and audit concerns should attach to asset metadata rather than changing the transfer payload contract itself.
 
 
 ## API Endpoints

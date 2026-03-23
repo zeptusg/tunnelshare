@@ -82,6 +82,12 @@ Upload direction:
 - Per-file progress, retry, and resumable behavior belong to upload handling, not transfer state transitions.
 - Storage access should be abstracted behind server-side interfaces so local adapters and future cloud/object-storage adapters can share the same transfer logic.
 
+Storage model:
+
+- Redis stores short-lived transfer state, codes, and TTL-driven coordination.
+- Object storage stores raw file bytes.
+- Asset metadata should be modeled so it can live in a database later for ownership, cleanup, and audit concerns without changing transfer payload shape.
+
 Transport policy:
 
 - Initial implementation uses polling for waiting transfers.
