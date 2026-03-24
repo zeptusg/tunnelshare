@@ -45,6 +45,8 @@ Important rules:
 - Storage and upload handling should remain abstract enough to support serverless deployment and future cloud storage backends.
 - Raw file bytes should live in object storage; transfers and codes remain short-lived Redis records.
 - Durable asset metadata may begin minimally, but the design should allow moving metadata into a database later without changing transfer payloads.
+- Public anonymous endpoints must be hardened for abuse with practical controls such as rate limiting and bounded upload behavior.
+- Transfer lifecycle behavior must be explicit end-to-end, including what happens when a transfer is expired or consumed.
 
 
 ## Core Flow
@@ -114,6 +116,7 @@ Rules:
 - `awaiting_payload` transfers do not contain payload
 - `ready` transfers always contain payload
 - `consumed` and `expired` are terminal states
+- retrieval and file access behavior for terminal states must follow one server-defined policy
 - payloads may contain text, files, or both
 - at least one of `payload.text` or `payload.files` must be present when payload exists
 - file payloads should use an array-based reference model, even for a single file

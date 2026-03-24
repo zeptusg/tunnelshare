@@ -1,118 +1,68 @@
 # Plans / Milestones
 
-## M0 — Transfer Domain Shift
-Goal: move from sender-only sessions to a transfer model that supports both entry flows.
-- Establish folder structure:
-  - `src/lib/*` for config + utilities
-  - `src/server/*` for transfer lifecycle and domain logic
-- Add env config + `.env.example`
-- Define Transfer domain model and status rules
-- Define transport policy: polling first, SSE/WebSockets later without changing transfer state semantics
-- Define file payload model as a file collection shape that can represent one or many files
-- Create Redis client wrapper (TTL support)
+## Completed
+- C1 — Transfer Domain Foundation
+- C2 — Sender-First Transfer Flow
+- C3 — Receiver-First Transfer Flow
+- C4 — Transfer Retrieval And Polling
+- C5 — File And Mixed Payload Support
+- C6 — Upload Pipeline And Storage Abstraction
+- C7 — API And E2E Core Flow Coverage
+
+## M1 — Production Hardening
+- Add rate limiting or abuse controls for transfer creation, polling, and upload routes
+- Tighten upload abuse protection and request validation around anonymous usage
+- Ensure download responses use safe, consistent headers across providers
+- Define basic operational safeguards for Redis/storage failures
 
 Acceptance:
-- App runs locally.
-- Env config is centralized.
-- Redis connectivity can be verified (simple health route or minimal test).
-- Architecture docs define sender-first and receiver-first behavior clearly.
+- Anonymous endpoints have practical abuse protection
+- Upload and download behavior is hardened for public use
+- Failure modes are explicit and predictable
 
-## M1 — Sender-First Transfer
-- API: `POST /api/transfers`
-  - generate high-entropy human-friendly code (e.g., ABCD-EFGH)
-  - create a `ready` transfer when payload is supplied
-  - store transfer in Redis with TTL
-  - return `{ code, receiveUrl, expiresAt }`
-- Sender UI displays code + `receiveUrl`
+## M2 — Lifecycle Completion
+- Define and implement the remaining transfer lifecycle semantics for `consumed` and `expired`
+- Decide whether transfers are single-read, multi-read until expiry, or another explicit policy
+- Make expiry behavior consistent across transfer retrieval, file access, and UI messaging
+- Keep lifecycle rules server-owned and independent from page behavior
 
 Acceptance:
-- Ready transfer exists in Redis with TTL.
-- Sender can generate and see code + link.
+- Transfer lifecycle is fully defined, not partially modeled
+- Retrieval and download behavior match the same lifecycle policy
+- UI reflects server lifecycle states without custom inference
 
-## M2 — Receiver-First Rendezvous
-- API: `POST /api/transfers`
-  - create an `awaiting_payload` transfer when receiver intent is supplied
-  - return `{ code, sendUrl, expiresAt }`
-- Receiver page can start a transfer and display sender QR/link
-- Sender page can open a receiver-issued transfer and submit payload into it
-
-Acceptance:
-- Receiver-first transfer can be created without payload.
-- Sender can fulfill a waiting transfer.
-
-## M3 — Transfer Retrieval And Completion
-- API: `GET /api/transfers/{code}` returns transfer status
-- API: `POST /api/transfers/{code}/payload`
-  - validate payload size and type
-  - attach payload to `awaiting_payload`
-  - move transfer to `ready`
-- Receiver UI states:
-  - awaiting payload
-  - ready
-  - expired
-  - invalid
-- Waiting clients poll while transfer is `awaiting_payload`
+## M3 — Retention And Cleanup
+- Add cleanup for expired transfer records and uploaded assets where needed
+- Use storage-provider deletion paths instead of leaving expiry as a logical-only state
+- Keep retention policy compatible with future database-backed asset metadata
 
 Acceptance:
-- Both entry flows converge on the same `ready` retrieval path.
-- Receiver can retrieve payload reliably by QR or manual code.
-- Polling behavior is explicit and testable.
+- Expired transfers and stale assets do not accumulate indefinitely
+- Cleanup behavior works across storage drivers without changing transfer payloads
 
-## M4 — File Payload Evolution
-- Extend transfer payload schema from text-only to a mixed payload envelope
-- Support:
-  - text only
-  - files only
-  - text and files together
-- Use the same transfer lifecycle for single-file and multi-file payloads
-- Keep file metadata/reference storage separate from UI concerns
-- Keep upload lifecycle separate from transfer lifecycle so multi-file progress and retries do not interrupt the transfer model
+## M4 — Observability And Diagnostics
+- Add structured logging around transfer create, fulfill, fetch, upload finalize, and download failures
+- Add minimal metrics or operational counters where practical
+- Keep health checks useful for real deployment debugging, not only local sanity checks
 
 Acceptance:
-- File transfer can be added without redesigning the transfer state machine.
-- The payload contract requires at least one of text or files.
-- A single file is represented as a one-item file collection.
+- Production failures can be diagnosed without reproducing them manually
+- Core transfer and upload events are visible enough to support operations
 
-## M5 — Upload Pipeline
-- Add asset/upload handling separate from transfer creation
-- Support one or many files with per-file progress and retry
-- Finalize a transfer only after the payload is ready to reference uploaded assets
-- Keep raw file bytes out of Redis transfer records
-- Introduce storage abstraction that can support local development now and cloud/object storage later
-- Add provider-neutral file access so receive/download behavior stays consistent across local and cloud storage drivers
+## M5 — Core UX Polish
+- Improve send/receive/loading/error/expiry states across the main flows
+- Refine mobile responsiveness and make the primary actions feel more intentional
+- Improve failure recovery messaging for upload, polling, and invalid/expired codes
 
 Acceptance:
-- Multi-file upload progress is resilient and does not depend on transfer state transitions.
-- Transfers reference uploaded assets rather than storing file bytes.
-- Files can be retrieved through a provider-neutral app route instead of storage-specific UI links.
+- Core flows feel complete, not just functional
+- Users can understand what happened and what to do next when something fails
 
-## M6 — Compatibility And Hardening
-- Keep `/api/sessions` compatibility only as long as the UI still depends on it
-- Normalize code handling across transfer routes
-- Cover both flows in e2e tests
-- Add SSE or WebSocket transport only if polling becomes insufficient
+## M6 — Expansion Readiness
+- Keep new transfer, upload, storage, and state-transition rules in shared server/domain code
+- Keep pages and route handlers thin as new features are added
+- Reuse the same payload and transfer contracts for future mobile, wrapper, or external API clients
 
 Acceptance:
-- Old session routes are either removed or explicitly documented as compatibility paths.
-- Dual-flow coverage exists in automated tests.
-- Push transport, if added, reuses the same transfer state transitions.
-
-## M7 — Native Share Entry
-- Evaluate PWA share-target support only as an optional enhancement where the platform supports it
-- Plan a thin native wrapper/app for reliable mobile share-sheet intake
-- Reuse the same upload pipeline and transfer payload contract for web and native entry paths
-
-Acceptance:
-- Mobile share-sheet integration does not require a separate transfer model.
-- Native or wrapped entry flows converge on the same payload finalization path as the web UI.
-
-## M8 — Accounts And Cloud Readiness
-- Keep transfer ownership and file metadata models compatible with a future user/account system
-- Keep storage and metadata access behind abstractions that are safe for serverless deployment
-- Avoid local filesystem assumptions in core transfer logic
-- Keep Redis focused on ephemeral transfer state; treat object storage as the source of file bytes
-- Plan durable asset metadata so it can move to a database-backed model before or alongside account features
-
-Acceptance:
-- Anonymous flow continues to work unchanged.
-- Future account linkage can be added without redesigning transfer payloads or upload state.
+- New features do not push business logic back into UI code
+- Web-specific delivery details stay separate from reusable transfer behavior

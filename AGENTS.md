@@ -26,6 +26,7 @@ Follow these rules when working on this project.
 src/server/
 
 - UI should only call APIs and render results.
+- Build for reuse: keep transfer, upload, storage, and state-transition rules in shared server/domain code; keep pages and routes thin so future web, mobile, or external clients can reuse the same core behavior without refactoring it out later.
 
 ## Imports
 
