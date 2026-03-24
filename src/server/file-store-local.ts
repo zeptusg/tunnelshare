@@ -11,6 +11,7 @@ import type {
   FileStore,
   FinalizeUploadParams,
   GetStoredFileAssetParams,
+  StoredFileDownload,
 } from "@/server/file-store";
 import {
   createUploadTargetParamsSchema,
@@ -158,6 +159,16 @@ export function createLocalFileStore(): FileStore {
       const { assetId } = getStoredFileAssetParamsSchema.parse(params);
       const record = await readLocalAssetRecord(assetId);
       return buildStoredFileAsset(record);
+    },
+
+    async downloadStoredFile(asset: StoredFileAsset): Promise<StoredFileDownload> {
+      const fileBytes = await readLocalUploadBytes(asset.id);
+
+      return {
+        body: fileBytes,
+        contentType: asset.contentType,
+        contentLength: fileBytes.byteLength,
+      };
     },
 
     async getDownloadUrl(asset: StoredFileAsset): Promise<string> {

@@ -10,6 +10,7 @@ import type {
   FileStore,
   FinalizeUploadParams,
   GetStoredFileAssetParams,
+  StoredFileDownload,
 } from "@/server/file-store";
 import {
   createUploadTargetParamsSchema,
@@ -147,6 +148,26 @@ export function createSupabaseFileStore(): FileStore {
       }
 
       return storedFileAssetSchema.parse(storedAsset);
+    },
+
+    async downloadStoredFile(asset: StoredFileAsset): Promise<StoredFileDownload> {
+      const downloadResponse = await supabase.storage
+        .from(config.supabaseBucket!)
+        .download(asset.storageKey);
+
+      if (downloadResponse.error || !downloadResponse.data) {
+        throw new Error(
+          `Failed to download Supabase object "${asset.storageKey}": ${downloadResponse.error?.message ?? "unknown_error"}`
+        );
+      }
+
+      const fileBytes = new Uint8Array(await downloadResponse.data.arrayBuffer());
+
+      return {
+        body: fileBytes,
+        contentType: asset.contentType,
+        contentLength: fileBytes.byteLength,
+      };
     },
 
     async getDownloadUrl(asset: StoredFileAsset): Promise<string> {

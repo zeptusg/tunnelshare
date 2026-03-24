@@ -35,12 +35,21 @@ export type DeleteStoredFileParams = z.input<
   typeof deleteStoredFileParamsSchema
 >;
 
+export type StoredFileDownload = {
+  body: Uint8Array;
+  contentType: string;
+  contentLength?: number;
+};
+
 // Storage backends implement this interface so transfer logic stays independent
 // from the actual file provider, whether local or cloud-based.
 export interface FileStore {
   createUploadTarget(params: CreateUploadTargetParams): Promise<UploadTarget>;
   finalizeUpload(params: FinalizeUploadParams): Promise<StoredFileAsset>;
   getStoredFileAsset(params: GetStoredFileAssetParams): Promise<StoredFileAsset>;
+  // Read bytes through the active provider so app routes can serve files with
+  // consistent headers and filenames regardless of storage backend.
+  downloadStoredFile(asset: StoredFileAsset): Promise<StoredFileDownload>;
   getDownloadUrl(asset: StoredFileAsset): Promise<string>;
   deleteStoredFile(params: DeleteStoredFileParams): Promise<void>;
 }
