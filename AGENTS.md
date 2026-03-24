@@ -64,7 +64,13 @@ src/lib/config.ts
 - File transfer must be modeled to support one or many files without changing the core transfer shape later.
 - Transfer lifecycle must stay separate from file upload lifecycle.
 - Transfers store file references and metadata, not raw file bytes.
+- Raw file bytes belong in object storage, not Redis.
+- Redis remains the home for short-lived transfer state and codes.
+- Temporary asset metadata may live in Redis while the app is anonymous-only, but it must stay abstract enough to move to a real database later without changing transfer payload shape.
 - Future mobile share-sheet support should reuse the same transfer payload contract rather than introduce a separate domain path.
+- Storage integrations should be abstracted behind server-side interfaces so local, object-storage, and future cloud backends can be swapped without rewriting transfer logic.
+- Future user/account features must layer on top of the transfer and upload model, not replace it.
+- File access routes should be provider-neutral and serve files through app-controlled headers when the product needs consistent download behavior across storage backends.
 
 Transfer model:
 

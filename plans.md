@@ -78,16 +78,24 @@ Acceptance:
 - Support one or many files with per-file progress and retry
 - Finalize a transfer only after the payload is ready to reference uploaded assets
 - Keep raw file bytes out of Redis transfer records
+- Introduce storage abstraction that can support local development now and cloud/object storage later
+- Add provider-neutral file access so receive/download behavior stays consistent across local and cloud storage drivers
 
 Acceptance:
 - Multi-file upload progress is resilient and does not depend on transfer state transitions.
 - Transfers reference uploaded assets rather than storing file bytes.
+- Files can be retrieved through a provider-neutral app route instead of storage-specific UI links.
 
 ## M6 — Compatibility And Hardening
 - Keep `/api/sessions` compatibility only as long as the UI still depends on it
 - Normalize code handling across transfer routes
 - Cover both flows in e2e tests
 - Add SSE or WebSocket transport only if polling becomes insufficient
+
+Acceptance:
+- Old session routes are either removed or explicitly documented as compatibility paths.
+- Dual-flow coverage exists in automated tests.
+- Push transport, if added, reuses the same transfer state transitions.
 
 ## M7 — Native Share Entry
 - Evaluate PWA share-target support only as an optional enhancement where the platform supports it
@@ -98,7 +106,13 @@ Acceptance:
 - Mobile share-sheet integration does not require a separate transfer model.
 - Native or wrapped entry flows converge on the same payload finalization path as the web UI.
 
+## M8 — Accounts And Cloud Readiness
+- Keep transfer ownership and file metadata models compatible with a future user/account system
+- Keep storage and metadata access behind abstractions that are safe for serverless deployment
+- Avoid local filesystem assumptions in core transfer logic
+- Keep Redis focused on ephemeral transfer state; treat object storage as the source of file bytes
+- Plan durable asset metadata so it can move to a database-backed model before or alongside account features
+
 Acceptance:
-- Old session routes are either removed or explicitly documented as compatibility paths.
-- Dual-flow coverage exists in automated tests.
-- Push transport, if added, reuses the same transfer state transitions.
+- Anonymous flow continues to work unchanged.
+- Future account linkage can be added without redesigning transfer payloads or upload state.

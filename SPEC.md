@@ -9,8 +9,8 @@ The application is optimized for fast sharing between devices such as:
 
 No accounts are required. Transfers are temporary and expire automatically.
 
-TunnelShare is designed to support **multiple payload types** in the future.  
-The first implemented slice supports **text sharing**, with **file sharing planned next**.  
+TunnelShare is designed to support **multiple payload types**.  
+The current implementation supports **text sharing**, **file sharing**, and **mixed text + file transfers**.  
 File transfer should be designed as a **file collection** model so single-file and multi-file sharing use the same domain contract.
 The transfer payload model should also allow **text and files together** in the same transfer.
 
@@ -42,6 +42,9 @@ Important rules:
 - QR URLs are server-issued and may be role-specific.
 - Waiting transfers use polling first. SSE or WebSockets can be added later on top of the same transfer lifecycle.
 - File uploads and transfer state are separate concerns: uploads prepare assets, transfers reference them.
+- Storage and upload handling should remain abstract enough to support serverless deployment and future cloud storage backends.
+- Raw file bytes should live in object storage; transfers and codes remain short-lived Redis records.
+- Durable asset metadata may begin minimally, but the design should allow moving metadata into a database later without changing transfer payloads.
 
 
 ## Core Flow
@@ -49,7 +52,7 @@ Important rules:
 ### Sender-First
 
 1. Sender opens the **Send page**
-2. Sender selects the content to send (currently text)
+2. Sender selects the content to send
 3. Sender clicks **Send**
 4. Backend creates a transfer in `ready`
 5. Sender receives:
@@ -116,6 +119,7 @@ Rules:
 - file payloads should use an array-based reference model, even for a single file
 
 Transfers are stored in Redis with TTL.
+File bytes are stored outside Redis in object storage or a storage adapter suitable for serverless deployment.
 
 Compatibility note:
 
@@ -124,6 +128,7 @@ Compatibility note:
 
 For file sharing, the payload will reference one or more stored files instead of containing file bytes directly.
 Upload progress for one or many files should be handled outside the transfer state machine so retries or slower files do not corrupt transfer state.
+Future account ownership and audit concerns should attach to asset metadata rather than changing the transfer payload contract itself.
 
 
 ## API Endpoints
@@ -150,32 +155,21 @@ Receiver-first request:
   intent: "receive"
 }
 
-Future request (file sharing):
-
-multipart/form-data upload with file metadata.
-
-Future file payload contract:
-
-{
-  payload: {
-    files: fileReference[]
-  }
-}
-
-Future mixed payload contract:
+Current file and mixed payload contract:
 
 {
   payload: {
     text?: string
-    files?: fileReference[]
+    uploadedAssetIds?: string[]
   }
 }
 
-Future file handling direction:
+Current file handling direction:
 
 - file bytes are uploaded through a dedicated asset pipeline
 - the transfer is finalized only after it can reference uploaded assets
 - the same payload contract must work for web UI and future native share-sheet entry
+- storage access should sit behind a server-side abstraction so local development and future cloud/object storage can use the same transfer model
 
 Sender-first response:
 
@@ -222,7 +216,7 @@ Request:
 {
   payload: {
     text?: string
-    files?: fileReference[]
+    uploadedAssetIds?: string[]
   }
 }
 
@@ -246,8 +240,8 @@ Entry page with two options:
 
 Components:
 - input for text
-- file upload (future, designed for one or many files)
-- drag/drop or picker-based file selection where supported
+- file upload for one or many files
+- picker-based multi-file selection today, with drag/drop possible later
 - Send button
 
 Sender-first mode after sending:
@@ -294,10 +288,9 @@ Errors:
 
 Planned extensions:
 
-- Real file upload and download support
 - Multiple file sharing
-- Mixed text + file sending in one composed UI
 - Native or wrapped mobile share-sheet intake using the same transfer payload model
+- Optional user/account system layered on top of the same transfer and upload architecture
 - End-to-end encryption
 - Device pairing
 - Clipboard integration
