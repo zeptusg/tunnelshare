@@ -118,8 +118,8 @@ export default function ReceiveCodePage() {
     }
   }
 
-  function getLocalFileHref(assetId: string): string {
-    return `/api/files/local/${assetId}`;
+  function getFileHref(assetId: string): string {
+    return `/api/files/${assetId}`;
   }
 
   return (
@@ -200,7 +200,7 @@ export default function ReceiveCodePage() {
                 {readyFilesPayload.map((file) => (
                   <li key={file.id} className="rounded-lg border border-zinc-200 bg-white px-3 py-2">
                     <a
-                      href={getLocalFileHref(file.id)}
+                      href={getFileHref(file.id)}
                       className="text-sm font-medium text-blue-700 underline"
                       target="_blank"
                       rel="noopener noreferrer"
