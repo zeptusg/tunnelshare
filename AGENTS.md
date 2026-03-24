@@ -66,10 +66,11 @@ src/lib/config.ts
 - Transfers store file references and metadata, not raw file bytes.
 - Raw file bytes belong in object storage, not Redis.
 - Redis remains the home for short-lived transfer state and codes.
-- Durable asset metadata should be designed so it can move to a real database later without changing transfer payload shape.
+- Temporary asset metadata may live in Redis while the app is anonymous-only, but it must stay abstract enough to move to a real database later without changing transfer payload shape.
 - Future mobile share-sheet support should reuse the same transfer payload contract rather than introduce a separate domain path.
 - Storage integrations should be abstracted behind server-side interfaces so local, object-storage, and future cloud backends can be swapped without rewriting transfer logic.
 - Future user/account features must layer on top of the transfer and upload model, not replace it.
+- File access routes should be provider-neutral and serve files through app-controlled headers when the product needs consistent download behavior across storage backends.
 
 Transfer model:
 

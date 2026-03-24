@@ -79,10 +79,12 @@ Acceptance:
 - Finalize a transfer only after the payload is ready to reference uploaded assets
 - Keep raw file bytes out of Redis transfer records
 - Introduce storage abstraction that can support local development now and cloud/object storage later
+- Add provider-neutral file access so receive/download behavior stays consistent across local and cloud storage drivers
 
 Acceptance:
 - Multi-file upload progress is resilient and does not depend on transfer state transitions.
 - Transfers reference uploaded assets rather than storing file bytes.
+- Files can be retrieved through a provider-neutral app route instead of storage-specific UI links.
 
 ## M6 — Compatibility And Hardening
 - Keep `/api/sessions` compatibility only as long as the UI still depends on it

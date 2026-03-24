@@ -81,12 +81,14 @@ Upload direction:
 - Transfers should be created or fulfilled only after they can reference uploaded assets.
 - Per-file progress, retry, and resumable behavior belong to upload handling, not transfer state transitions.
 - Storage access should be abstracted behind server-side interfaces so local adapters and future cloud/object-storage adapters can share the same transfer logic.
+- Upload completion should remain provider-neutral: upload bytes first, then finalize the asset through the app before attaching it to a transfer.
 
 Storage model:
 
 - Redis stores short-lived transfer state, codes, and TTL-driven coordination.
 - Object storage stores raw file bytes.
-- Asset metadata should be modeled so it can live in a database later for ownership, cleanup, and audit concerns without changing transfer payload shape.
+- Asset metadata may be short-lived in Redis today, but it should be modeled so it can live in a database later for ownership, cleanup, and audit concerns without changing transfer payload shape.
+- File access should go through a provider-neutral app route when the product needs consistent filenames and download headers across storage backends.
 
 Transport policy:
 

@@ -9,8 +9,8 @@ The application is optimized for fast sharing between devices such as:
 
 No accounts are required. Transfers are temporary and expire automatically.
 
-TunnelShare is designed to support **multiple payload types** in the future.  
-The first implemented slice supports **text sharing**, with **file sharing planned next**.  
+TunnelShare is designed to support **multiple payload types**.  
+The current implementation supports **text sharing**, **file sharing**, and **mixed text + file transfers**.  
 File transfer should be designed as a **file collection** model so single-file and multi-file sharing use the same domain contract.
 The transfer payload model should also allow **text and files together** in the same transfer.
 
@@ -52,7 +52,7 @@ Important rules:
 ### Sender-First
 
 1. Sender opens the **Send page**
-2. Sender selects the content to send (currently text)
+2. Sender selects the content to send
 3. Sender clicks **Send**
 4. Backend creates a transfer in `ready`
 5. Sender receives:
@@ -155,28 +155,16 @@ Receiver-first request:
   intent: "receive"
 }
 
-Future request (file sharing):
-
-multipart/form-data upload with file metadata.
-
-Future file payload contract:
-
-{
-  payload: {
-    files: fileReference[]
-  }
-}
-
-Future mixed payload contract:
+Current file and mixed payload contract:
 
 {
   payload: {
     text?: string
-    files?: fileReference[]
+    uploadedAssetIds?: string[]
   }
 }
 
-Future file handling direction:
+Current file handling direction:
 
 - file bytes are uploaded through a dedicated asset pipeline
 - the transfer is finalized only after it can reference uploaded assets
@@ -228,7 +216,7 @@ Request:
 {
   payload: {
     text?: string
-    files?: fileReference[]
+    uploadedAssetIds?: string[]
   }
 }
 
@@ -252,8 +240,8 @@ Entry page with two options:
 
 Components:
 - input for text
-- file upload (future, designed for one or many files)
-- drag/drop or picker-based file selection where supported
+- file upload for one or many files
+- picker-based multi-file selection today, with drag/drop possible later
 - Send button
 
 Sender-first mode after sending:
@@ -300,9 +288,7 @@ Errors:
 
 Planned extensions:
 
-- Real file upload and download support
 - Multiple file sharing
-- Mixed text + file sending in one composed UI
 - Native or wrapped mobile share-sheet intake using the same transfer payload model
 - Optional user/account system layered on top of the same transfer and upload architecture
 - End-to-end encryption
