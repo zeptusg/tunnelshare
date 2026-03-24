@@ -52,6 +52,8 @@ function createReadyTransferRecord(
   base: ReadyTransferBase,
   payload: TransferPayload
 ): Transfer {
+  // All ready transfers share the same shape regardless of whether they were
+  // created sender-first or fulfilled from a waiting receiver-first transfer.
   return transferSchema.parse({
     ...base,
     status: "ready",

@@ -92,6 +92,8 @@ export async function POST(
       return NextResponse.json(CONFLICT_RESPONSE, { status: 409 });
     }
 
+    // Fulfillment uses the same payload resolution path as sender-first create
+    // so uploaded asset handling stays consistent across both entry points.
     const resolvedPayload = await resolveTransferPayload(
       fileStore,
       requestResult.data.payload

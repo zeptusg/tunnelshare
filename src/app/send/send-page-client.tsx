@@ -27,6 +27,8 @@ function uploadFileBytesWithProgress(params: {
 
   return new Promise((resolve, reject) => {
     const request = new XMLHttpRequest();
+    // Fetch does not expose upload progress events in the browser, so the
+    // composer uses XHR only for the byte-transfer step.
     request.open(method, url);
 
     for (const [headerName, headerValue] of Object.entries(headers)) {
@@ -242,6 +244,8 @@ function SendPageContent({
         throw error;
       }
 
+      // Uploading bytes and finalizing the stored asset are separate steps so
+      // the same client flow works for local storage and signed cloud uploads.
       const finalizeUploadResponse = await fetch(uploadTargetResult.data.completeUrl, {
         method: "POST",
       });

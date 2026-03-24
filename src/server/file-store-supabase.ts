@@ -118,6 +118,8 @@ export function createSupabaseFileStore(): FileStore {
         throw new Error(`Supabase asset "${assetId}" metadata was not found`);
       }
 
+      // Finalization proves the signed upload actually produced the object we
+      // expected before the asset can be attached to a transfer.
       const fileInfoResponse = await supabase.storage
         .from(config.supabaseBucket!)
         .info(storedAsset.storageKey);
@@ -151,6 +153,8 @@ export function createSupabaseFileStore(): FileStore {
     },
 
     async downloadStoredFile(asset: StoredFileAsset): Promise<StoredFileDownload> {
+      // The app serves downloads itself so filename and access behavior stay
+      // consistent across storage providers.
       const downloadResponse = await supabase.storage
         .from(config.supabaseBucket!)
         .download(asset.storageKey);

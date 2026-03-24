@@ -68,6 +68,8 @@ export async function POST(
     const receiveUrl = new URL(`/receive/${code}`, config.appUrl).toString();
 
     if ("payload" in requestResult.data) {
+      // Sender-first transfers become ready immediately after the server
+      // resolves any uploaded asset ids into transfer-safe file references.
       const resolvedPayload = await resolveTransferPayload(
         fileStore,
         requestResult.data.payload
@@ -93,6 +95,8 @@ export async function POST(
     }
 
     const sendUrl = new URL(`/send?code=${code}`, config.appUrl).toString();
+    // Receiver-first transfers reserve a code first and wait for the sender to
+    // attach the payload later through the fulfill route.
     const transfer = createAwaitingTransfer({
       code,
       ttlSeconds: config.sessionTtlSeconds,

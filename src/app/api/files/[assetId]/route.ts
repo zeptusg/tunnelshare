@@ -31,6 +31,8 @@ export async function GET(
       const download = await fileStore.downloadStoredFile(asset);
       const responseBody = Buffer.from(download.body);
 
+      // Downloads are streamed through the app so the filename and response
+      // headers are consistent for local storage, Supabase, and future drivers.
       return new Response(responseBody, {
         status: 200,
         headers: {

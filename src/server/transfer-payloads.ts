@@ -37,6 +37,8 @@ export async function resolveTransferPayload(
   payload: TransferPayloadInput
 ): Promise<TransferPayload> {
   const validatedPayload = transferPayloadInputSchema.parse(payload);
+  // Clients send uploaded asset ids, not file references. The server resolves
+  // them into transfer-safe metadata so storage details stay server-owned.
   const files = validatedPayload.uploadedAssetIds
     ? await resolveUploadedFiles(fileStore, {
         assetIds: validatedPayload.uploadedAssetIds,
