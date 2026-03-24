@@ -102,7 +102,9 @@ test("create transfer rejects more than the configured uploaded file limit", asy
     });
 
     expect(uploadResponse.status()).toBe(200);
-    const storedAsset = await uploadResponse.json();
+    const finalizeResponse = await request.post(uploadTarget.completeUrl);
+    expect(finalizeResponse.status()).toBe(200);
+    const storedAsset = await finalizeResponse.json();
     uploadedAssetIds.push(storedAsset.id);
   }
 

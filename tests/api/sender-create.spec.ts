@@ -58,7 +58,9 @@ test("sender-first transfer create can resolve uploaded asset ids into file refe
     data: Buffer.from(fileContent, "utf8"),
   });
   expect(uploadResponse.status()).toBe(200);
-  const storedAsset = await uploadResponse.json();
+  const finalizeResponse = await request.post(uploadTarget.completeUrl);
+  expect(finalizeResponse.status()).toBe(200);
+  const storedAsset = await finalizeResponse.json();
 
   const createResponse = await request.post("/api/transfers", {
     data: {
@@ -119,7 +121,9 @@ test("sender-first transfer create can combine text and uploaded asset ids", asy
     data: Buffer.from(fileContent, "utf8"),
   });
   expect(uploadResponse.status()).toBe(200);
-  const storedAsset = await uploadResponse.json();
+  const finalizeResponse = await request.post(uploadTarget.completeUrl);
+  expect(finalizeResponse.status()).toBe(200);
+  const storedAsset = await finalizeResponse.json();
 
   const createResponse = await request.post("/api/transfers", {
     data: {

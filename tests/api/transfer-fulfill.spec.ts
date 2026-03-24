@@ -69,7 +69,9 @@ test("awaiting transfer can be fulfilled from uploaded asset ids", async ({
     data: Buffer.from(fileContent, "utf8"),
   });
   expect(uploadResponse.status()).toBe(200);
-  const storedAsset = await uploadResponse.json();
+  const finalizeResponse = await request.post(uploadTarget.completeUrl);
+  expect(finalizeResponse.status()).toBe(200);
+  const storedAsset = await finalizeResponse.json();
 
   const fulfillResponse = await request.post(`/api/transfers/${created.code}/payload`, {
     data: {
@@ -139,7 +141,9 @@ test("awaiting transfer can be fulfilled with text and uploaded asset ids togeth
     data: Buffer.from(fileContent, "utf8"),
   });
   expect(uploadResponse.status()).toBe(200);
-  const storedAsset = await uploadResponse.json();
+  const finalizeResponse = await request.post(uploadTarget.completeUrl);
+  expect(finalizeResponse.status()).toBe(200);
+  const storedAsset = await finalizeResponse.json();
 
   const fulfillResponse = await request.post(`/api/transfers/${created.code}/payload`, {
     data: {

@@ -21,10 +21,16 @@ test("local upload target accepts bytes and returns stored file asset", async ({
   expect(uploadTarget.assetId).toMatch(
     /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
   );
-  expect(uploadTarget.storageKey).toMatch(
-    /^local\/[0-9a-f-]+\/sample\.txt$/i
-  );
   expect(uploadTarget.uploadMethod).toBe("PUT");
+  expect(uploadTarget.uploadUrl).toContain(
+    `/api/uploads/local/${uploadTarget.assetId}`
+  );
+  expect(uploadTarget.completeUrl).toContain(
+    `/api/uploads/${uploadTarget.assetId}/complete`
+  );
+  expect(uploadTarget.storageKey).toMatch(
+    /^uploads\/[0-9a-f-]+\/sample\.txt$/i
+  );
 
   const uploadResponse = await request.fetch(uploadTarget.uploadUrl, {
     method: uploadTarget.uploadMethod,
@@ -46,9 +52,11 @@ test("local upload target accepts bytes and returns stored file asset", async ({
     storageKey: uploadTarget.storageKey,
   });
 
-  const downloadResponse = await request.get(`/api/files/local/${storedAsset.id}`);
+  const downloadResponse = await request.get(`/api/files/${storedAsset.id}`);
   expect(downloadResponse.status()).toBe(200);
-  expect(downloadResponse.headers()["content-type"]).toContain("text/plain");
+  expect(downloadResponse.headers()["content-disposition"]).toContain(
+    'filename="sample.txt"'
+  );
   expect(await downloadResponse.text()).toBe(fileContent);
 });
 
