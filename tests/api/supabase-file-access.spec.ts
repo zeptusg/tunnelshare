@@ -48,4 +48,12 @@ test("supabase upload target accepts bytes and finalizes a stored asset", async 
     contentType: "text/plain",
     storageKey: uploadTarget.storageKey,
   });
+
+  const fileRouteResponse = await request.get(`/api/files/${storedAsset.id}`, {
+    maxRedirects: 0,
+  });
+  expect(fileRouteResponse.status()).toBe(307);
+  const redirectLocation = fileRouteResponse.headers()["location"];
+  expect(redirectLocation).toBeTruthy();
+  expect(redirectLocation).toContain("supabase");
 });
