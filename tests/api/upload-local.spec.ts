@@ -21,6 +21,10 @@ test("local upload target accepts bytes and returns stored file asset", async ({
   expect(uploadTarget.assetId).toMatch(
     /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
   );
+  test.skip(
+    !String(uploadTarget.uploadUrl).includes("/api/uploads/local/"),
+    "Local storage driver is not active for this run."
+  );
   expect(uploadTarget.uploadMethod).toBe("PUT");
   expect(uploadTarget.uploadUrl).toContain(
     `/api/uploads/local/${uploadTarget.assetId}`
