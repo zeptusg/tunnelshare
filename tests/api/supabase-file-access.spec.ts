@@ -50,10 +50,14 @@ test("supabase upload target accepts bytes and finalizes a stored asset", async 
   });
 
   const fileRouteResponse = await request.get(`/api/files/${storedAsset.id}`, {
-    maxRedirects: 0,
   });
-  expect(fileRouteResponse.status()).toBe(307);
-  const redirectLocation = fileRouteResponse.headers()["location"];
-  expect(redirectLocation).toBeTruthy();
-  expect(redirectLocation).toContain("supabase");
+  expect(fileRouteResponse.status()).toBe(200);
+  expect(fileRouteResponse.headers()["content-type"]).toContain(
+    "application/octet-stream"
+  );
+  expect(fileRouteResponse.headers()["content-disposition"]).toContain(
+    'filename="supabase-sample.txt"'
+  );
+  expect(fileRouteResponse.headers()["x-content-type-options"]).toBe("nosniff");
+  expect(await fileRouteResponse.text()).toBe(fileContent);
 });

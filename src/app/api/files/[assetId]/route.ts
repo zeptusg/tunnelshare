@@ -5,6 +5,13 @@ import { createFileStore } from "@/server/file-store-factory";
 const normalizedAssetIdSchema = z.string().uuid("assetId must be a valid UUID");
 const fileStore = createFileStore();
 
+function getContentDisposition(filename: string): string {
+  const safeFilename = filename.replace(/["\\]/g, "_");
+  const encodedFilename = encodeURIComponent(filename);
+
+  return `attachment; filename="${safeFilename}"; filename*=UTF-8''${encodedFilename}`;
+}
+
 export async function GET(
   _request: Request,
   context: { params: Promise<{ assetId: string }> }
@@ -21,9 +28,20 @@ export async function GET(
       const asset = await fileStore.getStoredFileAsset({
         assetId: assetIdResult.data,
       });
-      const downloadUrl = await fileStore.getDownloadUrl(asset);
+      const download = await fileStore.downloadStoredFile(asset);
+      const responseBody = Buffer.from(download.body);
 
-      return NextResponse.redirect(downloadUrl, { status: 307 });
+      return new Response(responseBody, {
+        status: 200,
+        headers: {
+          "content-type": "application/octet-stream",
+          "content-length": String(
+            download.contentLength ?? responseBody.byteLength
+          ),
+          "content-disposition": getContentDisposition(asset.name),
+          "x-content-type-options": "nosniff",
+        },
+      });
     } catch {
       return NextResponse.json({ error: "not_found" }, { status: 404 });
     }

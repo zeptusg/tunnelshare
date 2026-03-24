@@ -201,9 +201,8 @@ export default function ReceiveCodePage() {
                   <li key={file.id} className="rounded-lg border border-zinc-200 bg-white px-3 py-2">
                     <a
                       href={getFileHref(file.id)}
+                      download={file.name}
                       className="text-sm font-medium text-blue-700 underline"
-                      target="_blank"
-                      rel="noopener noreferrer"
                     >
                       {file.name}
                     </a>
