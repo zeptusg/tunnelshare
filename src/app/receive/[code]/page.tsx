@@ -23,9 +23,9 @@ export default function ReceiveCodePage() {
   const [downloadStartingByFileId, setDownloadStartingByFileId] = useState<
     Record<string, boolean>
   >({});
-  const downloadResetTimeoutsRef = useRef<Record<string, ReturnType<typeof setTimeout>>>(
-    {}
-  );
+  const downloadResetTimeoutsRef = useRef<
+    Record<string, ReturnType<typeof window.setTimeout>>
+  >({});
   const normalizedCode = useMemo(() => {
     const rawCode = params.code;
     if (typeof rawCode !== "string") {
