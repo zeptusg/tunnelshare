@@ -39,6 +39,18 @@ The current architecture is already pointing the right way:
 
 That separation should stay.
 
+### Keep Draft State Out Of The Transfer Domain
+
+Pre-upload should not introduce a new transfer status such as "uploading" or "draft".
+
+Recommended ownership:
+
+- transfer domain: server-owned, starts only at `Send`
+- upload asset lifecycle: server-assisted, but separate from transfer
+- sender draft/composer state: client-owned
+
+This keeps the transfer model stable and avoids forcing future web or mobile clients to inherit page-specific workflow state.
+
 ### Add A Draft Attachment Layer In The Send UI
 
 The sender page should manage a local draft attachment model that is separate from:
@@ -74,6 +86,18 @@ type DraftAttachment = {
 
 The transfer payload should continue to use only `uploadedAssetIds` at send time.
 
+### Make The Draft Workflow Reusable
+
+Even if the first implementation lives in the web sender flow, the draft upload workflow should be treated as a reusable client application module, not as page-only logic.
+
+Recommended direction:
+
+- page component owns rendering
+- a shared sender-draft/composer module owns attachment workflow
+- server APIs remain the source of truth for upload targets, finalize, and transfer creation
+
+This matters because future native or wrapped clients should be able to reuse the same workflow rules even if they do not share the same UI.
+
 ## UX Rules
 
 ### On File Selection
@@ -101,6 +125,13 @@ Recommended behavior:
 - failed or canceled files should not be silently dropped; user should retry or remove them
 
 This is the safest product behavior because it avoids accidental partial sends.
+
+Product decision:
+
+- if the user selected files, the send action should represent the selected set as a whole
+- the app should not silently send only the subset that happened to finish first
+
+If partial-send behavior is ever desired later, it should be an explicit future mode, not an accidental side effect of background upload timing.
 
 ### Removal
 
@@ -147,6 +178,23 @@ Each draft attachment should own its own abort handles so cancellation stays per
 Retry should create a fresh upload target and run the upload again.
 Do not try to reuse a partially failed upload target.
 
+## Draft Session Boundary
+
+For the first version, draft state can remain in-memory in the sender client.
+
+That is the right tradeoff now because it avoids introducing a new server-side draft domain too early.
+
+Future-safe rule:
+
+- if later you need cross-tab recovery, reload persistence, background mobile continuation, or native handoff, add a separate `draftSession` concept
+- do not overload the transfer record to solve those problems
+
+In other words:
+
+- phase 1: local draft session
+- future phase: explicit draft session if product needs persistence
+- never: use transfer state as draft state
+
 ## Transfer Creation Rules
 
 When the user clicks `Send`:
@@ -178,6 +226,11 @@ Short-term policy:
 
 This is realistic and low-risk for the first version.
 
+Important clarification:
+
+- "temporary" must mean server-expiring and cleanup-eligible
+- it must not mean "implicitly durable forever if the sender abandons the page"
+
 ### Phase 2: Better Cleanup
 
 Add an explicit asset delete path for removed ready files:
@@ -186,6 +239,11 @@ Add an explicit asset delete path for removed ready files:
 - server uses the active storage provider to delete bytes + metadata
 
 This is a quality improvement, not a prerequisite for pre-upload.
+
+Recommended abstraction:
+
+- cleanup should be driven by asset metadata and storage provider interfaces
+- cleanup should not depend on UI behavior or transfer payload inspection
 
 ### Phase 3: Background Sweeping
 
@@ -199,7 +257,8 @@ This matters more once usage grows, especially for local storage and future clou
 
 - replace the current `selectedFiles: File[]` shape with a draft attachment list
 - keep UI rendering based on draft attachments
-- no server changes yet
+- move workflow rules into a reusable sender-draft/composer layer rather than leaving them embedded in the page
+- no server contract changes yet
 
 ### Step 2 — Start Upload On Selection
 
@@ -218,6 +277,7 @@ This matters more once usage grows, especially for local storage and future clou
 - remove upload work from `submitTransfer()`
 - `submitTransfer()` should only gather ready asset ids and create/fulfill the transfer
 - disable send while selected files are not in final draft states
+- keep the transfer API contract unchanged
 
 ### Step 5 — Add Cleanup Improvements
 
@@ -234,6 +294,7 @@ Main changes are in the sender page:
 - add per-file upload controller ownership
 - add cancel/retry/remove actions
 - separate upload progress from transfer submit state
+- move workflow behavior into a reusable sender-draft/composer module
 
 ### Server
 
@@ -246,6 +307,12 @@ Server-side changes are optional at first:
 
 The current upload and transfer endpoints already support the core design.
 
+Recommended later server additions:
+
+- explicit asset delete endpoint for removed draft assets
+- asset cleanup path that works across local and cloud providers
+- asset metadata fields that can distinguish temporary draft assets from attached transfer assets without changing transfer payload shape
+
 ## Why This Fits The Current Codebase
 
 This plan works with the existing model instead of fighting it:
@@ -256,6 +323,13 @@ This plan works with the existing model instead of fighting it:
 - transfer lifecycle is already separate from upload lifecycle
 
 That means this is an upgrade, not a redesign.
+
+It also preserves the most important future-friendly rule:
+
+- transfer creation remains a domain event
+- pre-upload remains preparation work
+
+That boundary is what keeps later mobile, native-wrapper, and external-client support sane.
 
 ## Risk Level
 
@@ -289,6 +363,13 @@ It is the highest-value performance improvement that:
 - keeps transfer rules clean
 - improves perceived speed immediately
 - does not require a backend refactor
+
+Recommended implementation style:
+
+- strict send semantics
+- reusable draft workflow layer
+- minimal server changes first
+- explicit cleanup improvements second
 
 Do not try to preload receiver-side file bytes by default.
 That is less predictable, more wasteful, and a worse fit for mobile behavior.
