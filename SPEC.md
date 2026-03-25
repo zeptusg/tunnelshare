@@ -42,6 +42,7 @@ Important rules:
 - QR URLs are server-issued and may be role-specific.
 - Waiting transfers use polling first. SSE or WebSockets can be added later on top of the same transfer lifecycle.
 - File uploads and transfer state are separate concerns: uploads prepare assets, transfers reference them.
+- Sender-selected files may be pre-uploaded as temporary draft assets before `Send`, but the transfer itself is still created only when the sender clicks `Send`.
 - Storage and upload handling should remain abstract enough to support serverless deployment and future cloud storage backends.
 - Raw file bytes should live in object storage; transfers and codes remain short-lived Redis records.
 - Durable asset metadata may begin minimally, but the design should allow moving metadata into a database later without changing transfer payloads.
@@ -252,6 +253,11 @@ Sender-first mode after sending:
 - display receive URL
 - copy button
 - QR code
+
+Sender-side preparation direction:
+- selected files may upload in the background before `Send`
+- users can manage those draft attachments before creating the transfer
+- transfer creation still happens only when `Send` is confirmed
 
 Receiver-first fulfillment mode:
 - open a receiver-issued send URL

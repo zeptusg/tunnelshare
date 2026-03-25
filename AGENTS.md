@@ -103,6 +103,7 @@ Coordination rules:
 - Clients should poll transfer status while waiting. Push transport is an optimization, not a separate state model.
 - Any compatibility session record used during migration must be derived from the transfer state, not treated as the primary domain model.
 - Upload progress and retry behavior belong to asset/upload handling, not to transfer state transitions.
+- Sender-side pre-upload is allowed before `Send` only as temporary draft asset preparation; it must not create a transfer, add draft-like transfer states, or blur the boundary between upload lifecycle and transfer lifecycle.
 
 ## Quality Checks
 
