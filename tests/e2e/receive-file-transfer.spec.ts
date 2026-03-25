@@ -21,7 +21,9 @@ test('receiver-first file transfer waits and becomes ready after sender upload',
     await senderPage.getByRole('button', { name: /^send$/i }).click();
     await expect(senderPage.getByLabel(/created transfer code/i)).toHaveText(code);
 
-    await expect(receiverPage.getByRole('link', { name: 'receiver-file.txt' })).toBeVisible();
+    await expect(receiverPage.getByText('receiver-file.txt')).toBeVisible();
+    await expect(receiverPage.getByLabel('Preview receiver-file.txt')).toBeVisible();
+    await expect(receiverPage.getByRole('link', { name: /download/i })).toBeVisible();
 
     await receiverPage.close();
     await senderPage.close();

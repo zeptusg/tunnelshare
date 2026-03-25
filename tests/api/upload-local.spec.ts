@@ -61,7 +61,16 @@ test("local upload target accepts bytes and returns stored file asset", async ({
   expect(downloadResponse.headers()["content-disposition"]).toContain(
     'filename="sample.txt"'
   );
+  expect(downloadResponse.headers()["content-type"]).toBe("text/plain");
   expect(await downloadResponse.text()).toBe(fileContent);
+
+  const previewResponse = await request.get(
+    `/api/files/${storedAsset.id}?disposition=inline`
+  );
+  expect(previewResponse.status()).toBe(200);
+  expect(previewResponse.headers()["content-disposition"]).toContain("inline;");
+  expect(previewResponse.headers()["content-type"]).toBe("text/plain");
+  expect(await previewResponse.text()).toBe(fileContent);
 });
 
 test("upload target rejects files that exceed the configured size limit", async ({

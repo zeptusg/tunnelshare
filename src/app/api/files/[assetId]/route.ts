@@ -3,17 +3,21 @@ import { z } from "zod";
 import { createFileStore } from "@/server/file-store-factory";
 
 const normalizedAssetIdSchema = z.string().uuid("assetId must be a valid UUID");
+const dispositionSchema = z.enum(["attachment", "inline"]).catch("attachment");
 const fileStore = createFileStore();
 
-function getContentDisposition(filename: string): string {
+function getContentDisposition(
+  filename: string,
+  disposition: "attachment" | "inline"
+): string {
   const safeFilename = filename.replace(/["\\]/g, "_");
   const encodedFilename = encodeURIComponent(filename);
 
-  return `attachment; filename="${safeFilename}"; filename*=UTF-8''${encodedFilename}`;
+  return `${disposition}; filename="${safeFilename}"; filename*=UTF-8''${encodedFilename}`;
 }
 
 export async function GET(
-  _request: Request,
+  request: Request,
   context: { params: Promise<{ assetId: string }> }
 ): Promise<Response> {
   try {
@@ -30,17 +34,20 @@ export async function GET(
       });
       const download = await fileStore.downloadStoredFile(asset);
       const responseBody = Buffer.from(download.body);
+      const disposition = dispositionSchema.parse(
+        new URL(request.url).searchParams.get("disposition")
+      );
 
       // Downloads are streamed through the app so the filename and response
       // headers are consistent for local storage, Supabase, and future drivers.
       return new Response(responseBody, {
         status: 200,
         headers: {
-          "content-type": "application/octet-stream",
+          "content-type": download.contentType,
           "content-length": String(
             download.contentLength ?? responseBody.byteLength
           ),
-          "content-disposition": getContentDisposition(asset.name),
+          "content-disposition": getContentDisposition(asset.name, disposition),
           "x-content-type-options": "nosniff",
         },
       });

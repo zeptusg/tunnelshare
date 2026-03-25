@@ -19,6 +19,7 @@ export default function ReceiveCodePage() {
   const params = useParams<{ code?: string }>();
   const [state, setState] = useState<PageState>({ status: "loading" });
   const [copied, setCopied] = useState(false);
+  const [downloadingAll, setDownloadingAll] = useState(false);
   const normalizedCode = useMemo(() => {
     const rawCode = params.code;
     if (typeof rawCode !== "string") {
@@ -122,6 +123,54 @@ export default function ReceiveCodePage() {
     return `/api/files/${assetId}`;
   }
 
+  function getFilePreviewHref(assetId: string): string {
+    return `/api/files/${assetId}?disposition=inline`;
+  }
+
+  async function downloadAllFiles(): Promise<void> {
+    if (!readyFilesPayload || readyFilesPayload.length < 2 || downloadingAll) {
+      return;
+    }
+
+    setDownloadingAll(true);
+
+    try {
+      for (const file of readyFilesPayload) {
+        const downloadLink = document.createElement("a");
+        downloadLink.href = getFileHref(file.id);
+        downloadLink.download = file.name;
+        downloadLink.rel = "noopener";
+        document.body.appendChild(downloadLink);
+        downloadLink.click();
+        downloadLink.remove();
+
+        await new Promise((resolve) => {
+          window.setTimeout(resolve, 250);
+        });
+      }
+    } finally {
+      setDownloadingAll(false);
+    }
+  }
+
+  function PreviewIcon() {
+    return (
+      <svg
+        aria-hidden="true"
+        viewBox="0 0 24 24"
+        className="h-4 w-4"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
+        <path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6-10-6-10-6Z" />
+        <circle cx="12" cy="12" r="3" />
+      </svg>
+    );
+  }
+
   return (
     <main className="flex min-h-screen items-center justify-center bg-zinc-100 px-4 py-8">
       <section className="w-full max-w-lg rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm sm:p-8">
@@ -195,17 +244,55 @@ export default function ReceiveCodePage() {
 
           {readyFilesPayload ? (
             <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-4 sm:p-5">
-              <p className="text-sm font-semibold text-zinc-900">Files received</p>
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-sm font-semibold text-zinc-900">Files received</p>
+                {readyFilesPayload.length > 1 ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      void downloadAllFiles();
+                    }}
+                    disabled={downloadingAll}
+                    className="inline-flex h-9 items-center justify-center rounded-lg border border-zinc-300 bg-white px-3 text-sm font-medium text-zinc-900 transition hover:bg-zinc-100 disabled:cursor-wait disabled:opacity-70"
+                  >
+                    {downloadingAll ? "Downloading..." : "Download all"}
+                  </button>
+                ) : null}
+              </div>
               <ul className="mt-3 space-y-2">
                 {readyFilesPayload.map((file) => (
-                  <li key={file.id} className="rounded-lg border border-zinc-200 bg-white px-3 py-2">
-                    <a
-                      href={getFileHref(file.id)}
-                      download={file.name}
-                      className="text-sm font-medium text-blue-700 underline"
-                    >
-                      {file.name}
-                    </a>
+                  <li
+                    key={file.id}
+                    className="rounded-lg border border-zinc-200 bg-white px-3 py-2"
+                  >
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-medium text-zinc-900">
+                          {file.name}
+                        </p>
+                        <p className="mt-1 text-xs text-zinc-500">{file.contentType}</p>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <a
+                          href={getFilePreviewHref(file.id)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          aria-label={`Preview ${file.name}`}
+                          title={`Preview ${file.name}`}
+                          className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-zinc-300 bg-white text-zinc-700 transition hover:bg-zinc-100"
+                        >
+                          <PreviewIcon />
+                        </a>
+                        <a
+                          href={getFileHref(file.id)}
+                          download={file.name}
+                          className="inline-flex h-9 items-center justify-center rounded-lg border border-zinc-300 bg-white px-3 text-sm font-medium text-zinc-900 transition hover:bg-zinc-100"
+                        >
+                          Download
+                        </a>
+                      </div>
+                    </div>
                   </li>
                 ))}
               </ul>

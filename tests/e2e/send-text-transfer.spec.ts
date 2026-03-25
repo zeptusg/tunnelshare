@@ -27,11 +27,18 @@ test('sender-first mixed transfer can include text and file together', async ({ 
     const textMessage = 'mixed payload text';
 
     await page.getByLabel(/text to send/i).fill(textMessage);
-    await page.getByLabel(/select file/i).setInputFiles({
-        name: 'mixed-file.txt',
-        mimeType: 'text/plain',
-        buffer: Buffer.from('mixed file upload'),
-    });
+    await page.getByLabel(/select file/i).setInputFiles([
+        {
+            name: 'mixed-file.txt',
+            mimeType: 'text/plain',
+            buffer: Buffer.from('mixed file upload'),
+        },
+        {
+            name: 'mixed-file-2.txt',
+            mimeType: 'text/plain',
+            buffer: Buffer.from('mixed second file upload'),
+        },
+    ]);
     await page.getByRole('button', { name: /^send$/i }).click();
 
     const receiveLink = page.getByRole('link', { name: /receive\/[A-Z0-9]{4}-[A-Z0-9]{4}/i });
@@ -41,5 +48,7 @@ test('sender-first mixed transfer can include text and file together', async ({ 
     expect(receiveHref).toBeTruthy();
     await page.goto(receiveHref!);
     await expect(page.getByText(textMessage)).toBeVisible();
-    await expect(page.getByRole('link', { name: 'mixed-file.txt' })).toBeVisible();
+    await expect(page.getByText('mixed-file.txt')).toBeVisible();
+    await expect(page.getByText('mixed-file-2.txt')).toBeVisible();
+    await expect(page.getByRole('button', { name: /download all/i })).toBeVisible();
 });
