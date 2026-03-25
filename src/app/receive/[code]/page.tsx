@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams } from "next/navigation";
 import { QRCodeSVG } from "qrcode.react";
 import {
@@ -20,6 +20,12 @@ export default function ReceiveCodePage() {
   const [state, setState] = useState<PageState>({ status: "loading" });
   const [copied, setCopied] = useState(false);
   const [downloadingAll, setDownloadingAll] = useState(false);
+  const [downloadStartingByFileId, setDownloadStartingByFileId] = useState<
+    Record<string, boolean>
+  >({});
+  const downloadResetTimeoutsRef = useRef<Record<string, ReturnType<typeof setTimeout>>>(
+    {}
+  );
   const normalizedCode = useMemo(() => {
     const rawCode = params.code;
     if (typeof rawCode !== "string") {
@@ -110,6 +116,16 @@ export default function ReceiveCodePage() {
     };
   }, [normalizedCode]);
 
+  useEffect(() => {
+    const downloadResetTimeouts = downloadResetTimeoutsRef.current;
+
+    return () => {
+      for (const timeoutId of Object.values(downloadResetTimeouts)) {
+        clearTimeout(timeoutId);
+      }
+    };
+  }, []);
+
   async function copyText(content: string): Promise<void> {
     try {
       await navigator.clipboard.writeText(content);
@@ -127,6 +143,38 @@ export default function ReceiveCodePage() {
     return `/api/files/${assetId}?disposition=inline`;
   }
 
+  function markDownloadStarting(fileId: string): void {
+    const existingTimeout = downloadResetTimeoutsRef.current[fileId];
+    if (existingTimeout) {
+      clearTimeout(existingTimeout);
+    }
+
+    setDownloadStartingByFileId((currentState) => ({
+      ...currentState,
+      [fileId]: true,
+    }));
+
+    downloadResetTimeoutsRef.current[fileId] = window.setTimeout(() => {
+      setDownloadStartingByFileId((currentState) => ({
+        ...currentState,
+        [fileId]: false,
+      }));
+      delete downloadResetTimeoutsRef.current[fileId];
+    }, 1500);
+  }
+
+  function triggerFileDownload(file: { id: string; name: string }): void {
+    markDownloadStarting(file.id);
+
+    const downloadLink = document.createElement("a");
+    downloadLink.href = getFileHref(file.id);
+    downloadLink.download = file.name;
+    downloadLink.rel = "noopener";
+    document.body.appendChild(downloadLink);
+    downloadLink.click();
+    downloadLink.remove();
+  }
+
   async function downloadAllFiles(): Promise<void> {
     if (!readyFilesPayload || readyFilesPayload.length < 2 || downloadingAll) {
       return;
@@ -136,13 +184,7 @@ export default function ReceiveCodePage() {
 
     try {
       for (const file of readyFilesPayload) {
-        const downloadLink = document.createElement("a");
-        downloadLink.href = getFileHref(file.id);
-        downloadLink.download = file.name;
-        downloadLink.rel = "noopener";
-        document.body.appendChild(downloadLink);
-        downloadLink.click();
-        downloadLink.remove();
+        triggerFileDownload(file);
 
         await new Promise((resolve) => {
           window.setTimeout(resolve, 250);
@@ -280,17 +322,23 @@ export default function ReceiveCodePage() {
                           rel="noopener noreferrer"
                           aria-label={`Preview ${file.name}`}
                           title={`Preview ${file.name}`}
-                          className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-zinc-300 bg-white text-zinc-700 transition hover:bg-zinc-100"
+                          className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-zinc-300 bg-white text-zinc-700 transition hover:bg-zinc-100 active:scale-95 active:bg-zinc-200"
                         >
                           <PreviewIcon />
                         </a>
-                        <a
-                          href={getFileHref(file.id)}
-                          download={file.name}
-                          className="inline-flex h-9 items-center justify-center rounded-lg border border-zinc-300 bg-white px-3 text-sm font-medium text-zinc-900 transition hover:bg-zinc-100"
+                        <button
+                          type="button"
+                          onClick={() => {
+                            triggerFileDownload(file);
+                          }}
+                          className={`inline-flex h-9 min-w-24 items-center justify-center rounded-lg border px-3 text-sm font-medium transition active:scale-[0.98] ${
+                            downloadStartingByFileId[file.id]
+                              ? "border-emerald-200 bg-emerald-50 text-emerald-800 hover:bg-emerald-100"
+                              : "border-zinc-300 bg-white text-zinc-900 hover:bg-zinc-100"
+                          }`}
                         >
-                          Download
-                        </a>
+                          {downloadStartingByFileId[file.id] ? "Starting..." : "Download"}
+                        </button>
                       </div>
                     </div>
                   </li>
