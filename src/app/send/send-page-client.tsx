@@ -3,7 +3,12 @@
 import { Suspense, useEffect, useEffectEvent, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { QRCodeSVG } from "qrcode.react";
-import { storedFileAssetSchema, uploadTargetSchema } from "@/lib/file-assets";
+import {
+  selectedFileSchema,
+  storedFileAssetSchema,
+  uploadTargetSchema,
+  validateSelectedFileForUpload,
+} from "@/lib/file-assets";
 import { formatUploadSizeLabel } from "@/lib/upload-policy";
 import {
   type TransferActionResponse,
@@ -139,6 +144,23 @@ function uploadFileBytesWithProgress(params: {
   });
 }
 
+function normalizeAppRouteUrlForBrowser(rawUrl: string): string {
+  const parsedUrl = new URL(rawUrl);
+
+  if (typeof window === "undefined") {
+    return parsedUrl.toString();
+  }
+
+  if (!parsedUrl.pathname.startsWith("/api/")) {
+    return parsedUrl.toString();
+  }
+
+  return new URL(
+    `${parsedUrl.pathname}${parsedUrl.search}${parsedUrl.hash}`,
+    window.location.origin
+  ).toString();
+}
+
 function getUploadErrorMessage(
   uploadResponse: unknown,
   fileName: string,
@@ -212,6 +234,7 @@ function SendPageContent({
       const seenFiles = new Set(
         currentAttachments.map((attachment) => attachment.fileIdentity)
       );
+      let nextErrorMessage: string | null = null;
 
       for (const nextFile of nextFiles) {
         const fileIdentity = getFileIdentity(nextFile);
@@ -220,6 +243,27 @@ function SendPageContent({
         }
 
         seenFiles.add(fileIdentity);
+        const normalizedSelectedFile = {
+          name: nextFile.name,
+          sizeBytes: nextFile.size,
+          contentType: nextFile.type || "application/octet-stream",
+        };
+        const selectedFileResult = selectedFileSchema.safeParse(normalizedSelectedFile);
+
+        if (!selectedFileResult.success) {
+          nextErrorMessage = `Could not use ${nextFile.name || "that file"}. Choose a valid file and try again.`;
+          continue;
+        }
+
+        const fileValidation = validateSelectedFileForUpload(normalizedSelectedFile, {
+          maxUploadFileBytes,
+        });
+
+        if (!fileValidation.ok) {
+          nextErrorMessage = `${nextFile.name} is too large. Keep each file under ${formatUploadSizeLabel(maxUploadFileBytes)}.`;
+          continue;
+        }
+
         mergedAttachments.push(createDraftAttachment(nextFile));
       }
 
@@ -228,7 +272,7 @@ function SendPageContent({
         return mergedAttachments.slice(0, maxUploadFiles);
       }
 
-      setErrorMessage(null);
+      setErrorMessage(nextErrorMessage);
 
       return mergedAttachments;
     });
@@ -244,6 +288,22 @@ function SendPageContent({
 
     setDraftAttachments((currentAttachments) =>
       currentAttachments.filter((attachment) => attachment.localId !== localId)
+    );
+  }
+
+  function retryDraftAttachment(localId: string): void {
+    setDraftAttachments((currentAttachments) =>
+      currentAttachments.map((attachment) =>
+        attachment.localId === localId
+          ? {
+              ...attachment,
+              status: "queued",
+              progressPercent: 0,
+              storedAssetId: undefined,
+              errorMessage: undefined,
+            }
+          : attachment
+      )
     );
   }
 
@@ -328,7 +388,7 @@ function SendPageContent({
 
       try {
         await uploadFileBytesWithProgress({
-          url: uploadTargetResult.data.uploadUrl,
+          url: normalizeAppRouteUrlForBrowser(uploadTargetResult.data.uploadUrl),
           method: uploadTargetResult.data.uploadMethod,
           headers: uploadTargetResult.data.headers,
           file: selectedFile,
@@ -371,10 +431,13 @@ function SendPageContent({
       };
       let finalizeUploadResponse: Response;
       try {
-        finalizeUploadResponse = await fetch(uploadTargetResult.data.completeUrl, {
-          method: "POST",
-          signal: finalizeUploadController.signal,
-        });
+        finalizeUploadResponse = await fetch(
+          normalizeAppRouteUrlForBrowser(uploadTargetResult.data.completeUrl),
+          {
+            method: "POST",
+            signal: finalizeUploadController.signal,
+          }
+        );
       } catch (error) {
         if (error instanceof Error && error.name === "AbortError") {
           return;
@@ -594,15 +657,28 @@ function SendPageContent({
                           {getDraftAttachmentStatusLabel(attachment)}
                         </p>
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => removeDraftAttachment(attachment.localId)}
-                        className="rounded-md border border-zinc-300 bg-white px-2 py-1 text-xs font-medium text-zinc-700 transition hover:bg-zinc-100"
-                        aria-label={`Remove ${attachment.file.name}`}
-                        disabled={pending}
-                      >
-                        Remove
-                      </button>
+                      <div className="flex items-center gap-2">
+                        {attachment.status === "failed" ? (
+                          <button
+                            type="button"
+                            onClick={() => retryDraftAttachment(attachment.localId)}
+                            className="rounded-md border border-zinc-300 bg-white px-2 py-1 text-xs font-medium text-zinc-700 transition hover:bg-zinc-100"
+                            aria-label={`Retry ${attachment.file.name}`}
+                            disabled={pending}
+                          >
+                            Retry
+                          </button>
+                        ) : null}
+                        <button
+                          type="button"
+                          onClick={() => removeDraftAttachment(attachment.localId)}
+                          className="rounded-md border border-zinc-300 bg-white px-2 py-1 text-xs font-medium text-zinc-700 transition hover:bg-zinc-100"
+                          aria-label={`Remove ${attachment.file.name}`}
+                          disabled={pending}
+                        >
+                          Remove
+                        </button>
+                      </div>
                     </div>
                     {attachment.status !== "removed" ? (
                       <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-zinc-200">
