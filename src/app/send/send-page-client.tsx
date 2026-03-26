@@ -30,6 +30,12 @@ type DraftAttachment = {
   errorMessage?: string;
 };
 
+type DraftAttachmentUploadControls = {
+  createUploadController?: AbortController;
+  finalizeUploadController?: AbortController;
+  uploadRequest?: XMLHttpRequest;
+};
+
 function getFileIdentity(file: File): string {
   return [file.name, file.size, file.lastModified].join(":");
 }
@@ -79,8 +85,9 @@ function uploadFileBytesWithProgress(params: {
   headers: Record<string, string>;
   file: File;
   onProgress: (progressPercent: number) => void;
+  onRequestReady?: (request: XMLHttpRequest) => void;
 }): Promise<unknown> {
-  const { url, method, headers, file, onProgress } = params;
+  const { url, method, headers, file, onProgress, onRequestReady } = params;
 
   return new Promise((resolve, reject) => {
     const request = new XMLHttpRequest();
@@ -92,6 +99,8 @@ function uploadFileBytesWithProgress(params: {
       request.setRequestHeader(headerName, headerValue);
     }
 
+    onRequestReady?.(request);
+
     request.upload.onprogress = (event) => {
       if (!event.lengthComputable) {
         return;
@@ -102,6 +111,10 @@ function uploadFileBytesWithProgress(params: {
 
     request.onerror = () => {
       reject(new Error(`Could not upload ${file.name}. Please try again.`));
+    };
+
+    request.onabort = () => {
+      reject(new Error("upload_aborted"));
     };
 
     request.onload = () => {
@@ -164,6 +177,7 @@ function SendPageContent({
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
   const inFlightUploadIdsRef = useRef(new Set<string>());
+  const uploadControlsByIdRef = useRef<Record<string, DraftAttachmentUploadControls>>({});
   const requestedCode = searchParams.get("code")?.trim().toUpperCase() ?? "";
   const isFulfillingTransfer = requestedCode.length > 0;
   const hasBlockingDraftAttachment = draftAttachments.some(
@@ -221,6 +235,13 @@ function SendPageContent({
   }
 
   function removeDraftAttachment(localId: string): void {
+    const uploadControls = uploadControlsByIdRef.current[localId];
+    uploadControls?.createUploadController?.abort();
+    uploadControls?.uploadRequest?.abort();
+    uploadControls?.finalizeUploadController?.abort();
+    delete uploadControlsByIdRef.current[localId];
+    inFlightUploadIdsRef.current.delete(localId);
+
     setDraftAttachments((currentAttachments) =>
       currentAttachments.filter((attachment) => attachment.localId !== localId)
     );
@@ -243,19 +264,38 @@ function SendPageContent({
         storedAssetId: undefined,
       });
 
-      const createUploadResponse = await fetch("/api/uploads", {
-        method: "POST",
-        headers: {
-          "content-type": "application/json",
-        },
-        body: JSON.stringify({
-          file: {
-            name: selectedFile.name,
-            sizeBytes: selectedFile.size,
-            contentType: selectedFile.type || "application/octet-stream",
+      const createUploadController = new AbortController();
+      uploadControlsByIdRef.current[attachment.localId] = {
+        createUploadController,
+      };
+
+      let createUploadResponse: Response;
+      try {
+        createUploadResponse = await fetch("/api/uploads", {
+          method: "POST",
+          headers: {
+            "content-type": "application/json",
           },
-        }),
-      });
+          signal: createUploadController.signal,
+          body: JSON.stringify({
+            file: {
+              name: selectedFile.name,
+              sizeBytes: selectedFile.size,
+              contentType: selectedFile.type || "application/octet-stream",
+            },
+          }),
+        });
+      } catch (error) {
+        if (error instanceof Error && error.name === "AbortError") {
+          return;
+        }
+
+        updateDraftAttachment(attachment.localId, {
+          status: "failed",
+          errorMessage: `Could not prepare ${selectedFile.name} for upload. Please try again.`,
+        });
+        return;
+      }
 
       const uploadTargetPayload: unknown = await createUploadResponse.json();
       if (!createUploadResponse.ok) {
@@ -269,6 +309,8 @@ function SendPageContent({
         });
         return;
       }
+
+      uploadControlsByIdRef.current[attachment.localId] = {};
 
       const uploadTargetResult = uploadTargetSchema.safeParse(uploadTargetPayload);
       if (!uploadTargetResult.success) {
@@ -296,8 +338,18 @@ function SendPageContent({
               status: "uploading",
             });
           },
+          onRequestReady: (request) => {
+            uploadControlsByIdRef.current[attachment.localId] = {
+              ...uploadControlsByIdRef.current[attachment.localId],
+              uploadRequest: request,
+            };
+          },
         });
       } catch (error) {
+        if (error instanceof Error && error.message === "upload_aborted") {
+          return;
+        }
+
         updateDraftAttachment(attachment.localId, {
           status: "failed",
           errorMessage:
@@ -313,9 +365,27 @@ function SendPageContent({
       updateDraftAttachment(attachment.localId, {
         status: "finalizing",
       });
-      const finalizeUploadResponse = await fetch(uploadTargetResult.data.completeUrl, {
-        method: "POST",
-      });
+      const finalizeUploadController = new AbortController();
+      uploadControlsByIdRef.current[attachment.localId] = {
+        finalizeUploadController,
+      };
+      let finalizeUploadResponse: Response;
+      try {
+        finalizeUploadResponse = await fetch(uploadTargetResult.data.completeUrl, {
+          method: "POST",
+          signal: finalizeUploadController.signal,
+        });
+      } catch (error) {
+        if (error instanceof Error && error.name === "AbortError") {
+          return;
+        }
+
+        updateDraftAttachment(attachment.localId, {
+          status: "failed",
+          errorMessage: `Could not finalize ${selectedFile.name}. Please try again.`,
+        });
+        return;
+      }
 
       const storedAssetPayload: unknown = await finalizeUploadResponse.json();
       if (!finalizeUploadResponse.ok) {
@@ -342,9 +412,9 @@ function SendPageContent({
       });
     } finally {
       inFlightUploadIdsRef.current.delete(attachment.localId);
+      delete uploadControlsByIdRef.current[attachment.localId];
     }
-    }
-  );
+  });
 
   useEffect(() => {
     const nextQueuedAttachment = draftAttachments.find(
