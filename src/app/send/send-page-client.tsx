@@ -55,11 +55,11 @@ function getDraftAttachmentStatusLabel(attachment: DraftAttachment): string {
     case "queued":
       return "Queued";
     case "preparing":
-      return "Preparing";
+      return "Preparing upload...";
     case "uploading":
       return `Uploading ${attachment.progressPercent}%`;
     case "finalizing":
-      return "Finalizing";
+      return "Finishing upload...";
     case "ready":
       return "Uploaded";
     case "failed":
@@ -553,14 +553,44 @@ function SendPageContent({
                 {draftAttachments.map((attachment) => (
                   <div
                     key={attachment.localId}
-                    className="rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2"
+                    className={`rounded-lg border px-3 py-2 transition-colors ${
+                      isDraftAttachmentPending(attachment)
+                        ? "border-zinc-300 bg-white"
+                        : attachment.status === "ready"
+                          ? "border-emerald-200 bg-emerald-50/60"
+                          : attachment.status === "failed"
+                            ? "border-red-200 bg-red-50/60"
+                            : "border-zinc-200 bg-zinc-50"
+                    }`}
                   >
                     <div className="flex items-center justify-between gap-3">
                       <div className="min-w-0 flex-1">
-                        <p className="truncate pr-3 text-sm text-zinc-700">
-                          {attachment.file.name}
-                        </p>
-                        <p className="mt-1 text-xs text-zinc-500">
+                        <div className="flex items-center gap-2">
+                          <span
+                            aria-hidden="true"
+                            className={`h-2 w-2 flex-none rounded-full ${
+                              isDraftAttachmentPending(attachment)
+                                ? "animate-pulse bg-zinc-500"
+                                : attachment.status === "ready"
+                                  ? "bg-emerald-500"
+                                  : attachment.status === "failed"
+                                    ? "bg-red-500"
+                                    : "bg-zinc-300"
+                            }`}
+                          />
+                          <p className="truncate pr-3 text-sm text-zinc-700">
+                            {attachment.file.name}
+                          </p>
+                        </div>
+                        <p
+                          className={`mt-1 text-xs ${
+                            attachment.status === "failed"
+                              ? "text-red-600"
+                              : attachment.status === "ready"
+                                ? "text-emerald-700"
+                                : "text-zinc-500"
+                          }`}
+                        >
                           {getDraftAttachmentStatusLabel(attachment)}
                         </p>
                       </div>
@@ -580,10 +610,17 @@ function SendPageContent({
                           className={`h-full rounded-full transition-all ${
                             attachment.status === "failed"
                               ? "bg-red-500"
-                              : "bg-zinc-900"
+                              : attachment.status === "ready"
+                                ? "bg-emerald-500"
+                                : "bg-zinc-900"
                           }`}
                           style={{
-                            width: `${attachment.status === "failed" ? 100 : attachment.progressPercent}%`,
+                            width: `${
+                              attachment.status === "failed" ||
+                              attachment.status === "ready"
+                                ? 100
+                                : attachment.progressPercent
+                            }%`,
                           }}
                         />
                       </div>
