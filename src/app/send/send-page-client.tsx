@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useEffect, useEffectEvent, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { QRCodeSVG } from "qrcode.react";
 import { storedFileAssetSchema, uploadTargetSchema } from "@/lib/file-assets";
@@ -63,6 +63,14 @@ function getDraftAttachmentStatusLabel(attachment: DraftAttachment): string {
     case "removed":
       return "Removed";
   }
+}
+
+function isDraftAttachmentPending(attachment: DraftAttachment): boolean {
+  return (
+    attachment.status === "preparing" ||
+    attachment.status === "uploading" ||
+    attachment.status === "finalizing"
+  );
 }
 
 function uploadFileBytesWithProgress(params: {
@@ -155,8 +163,12 @@ function SendPageContent({
   const [copied, setCopied] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
+  const inFlightUploadIdsRef = useRef(new Set<string>());
   const requestedCode = searchParams.get("code")?.trim().toUpperCase() ?? "";
   const isFulfillingTransfer = requestedCode.length > 0;
+  const hasBlockingDraftAttachment = draftAttachments.some(
+    (attachment) => attachment.status !== "ready"
+  );
 
   useEffect(() => {
     setTransfer(null);
@@ -214,20 +226,21 @@ function SendPageContent({
     );
   }
 
-  async function uploadSelectedFiles(): Promise<string[]> {
-    const uploadedAssetIds: string[] = [];
+  const uploadDraftAttachment = useEffectEvent(
+    async (attachment: DraftAttachment): Promise<void> => {
+    if (inFlightUploadIdsRef.current.has(attachment.localId)) {
+      return;
+    }
 
-    for (const attachment of draftAttachments) {
-      const selectedFile = attachment.file;
+    inFlightUploadIdsRef.current.add(attachment.localId);
+    const selectedFile = attachment.file;
+
+    try {
       updateDraftAttachment(attachment.localId, {
         progressPercent: 0,
-        status: "queued",
+        status: "preparing",
         errorMessage: undefined,
         storedAssetId: undefined,
-      });
-
-      updateDraftAttachment(attachment.localId, {
-        status: "preparing",
       });
 
       const createUploadResponse = await fetch("/api/uploads", {
@@ -254,9 +267,7 @@ function SendPageContent({
             maxUploadFileBytes
           ),
         });
-        throw new Error(
-          getUploadErrorMessage(uploadTargetPayload, selectedFile.name, maxUploadFileBytes)
-        );
+        return;
       }
 
       const uploadTargetResult = uploadTargetSchema.safeParse(uploadTargetPayload);
@@ -265,7 +276,7 @@ function SendPageContent({
           status: "failed",
           errorMessage: "Received an invalid upload target.",
         });
-        throw new Error("Received an invalid upload target.");
+        return;
       }
 
       updateDraftAttachment(attachment.localId, {
@@ -273,9 +284,8 @@ function SendPageContent({
         status: "uploading",
       });
 
-      let storedAssetPayload: unknown;
       try {
-        storedAssetPayload = await uploadFileBytesWithProgress({
+        await uploadFileBytesWithProgress({
           url: uploadTargetResult.data.uploadUrl,
           method: uploadTargetResult.data.uploadMethod,
           headers: uploadTargetResult.data.headers,
@@ -295,7 +305,7 @@ function SendPageContent({
               ? error.message
               : `Could not upload ${selectedFile.name}. Please try again.`,
         });
-        throw error;
+        return;
       }
 
       // Uploading bytes and finalizing the stored asset are separate steps so
@@ -307,13 +317,13 @@ function SendPageContent({
         method: "POST",
       });
 
-      storedAssetPayload = await finalizeUploadResponse.json();
+      const storedAssetPayload: unknown = await finalizeUploadResponse.json();
       if (!finalizeUploadResponse.ok) {
         updateDraftAttachment(attachment.localId, {
           status: "failed",
           errorMessage: `Could not finalize ${selectedFile.name}. Please try again.`,
         });
-        throw new Error(`Could not finalize ${selectedFile.name}. Please try again.`);
+        return;
       }
 
       const storedAssetResult = storedFileAssetSchema.safeParse(storedAssetPayload);
@@ -322,7 +332,7 @@ function SendPageContent({
           status: "failed",
           errorMessage: "Received an invalid stored file asset.",
         });
-        throw new Error("Received an invalid stored file asset.");
+        return;
       }
 
       updateDraftAttachment(attachment.localId, {
@@ -330,11 +340,29 @@ function SendPageContent({
         status: "ready",
         storedAssetId: storedAssetResult.data.id,
       });
-      uploadedAssetIds.push(storedAssetResult.data.id);
+    } finally {
+      inFlightUploadIdsRef.current.delete(attachment.localId);
+    }
+    }
+  );
+
+  useEffect(() => {
+    const nextQueuedAttachment = draftAttachments.find(
+      (attachment) =>
+        attachment.status === "queued" &&
+        !inFlightUploadIdsRef.current.has(attachment.localId)
+    );
+
+    if (!nextQueuedAttachment) {
+      return;
     }
 
-    return uploadedAssetIds;
-  }
+    if (draftAttachments.some(isDraftAttachmentPending)) {
+      return;
+    }
+
+    void uploadDraftAttachment(nextQueuedAttachment);
+  }, [draftAttachments]);
 
   async function submitTransfer(): Promise<void> {
     const normalizedText = text.trim();
@@ -345,8 +373,13 @@ function SendPageContent({
     try {
       setPending(true);
       setErrorMessage(null);
-      const uploadedAssetIds =
-        draftAttachments.length > 0 ? await uploadSelectedFiles() : undefined;
+      const uploadedAssetIds = draftAttachments
+        .map((attachment) => attachment.storedAssetId)
+        .filter((assetId): assetId is string => typeof assetId === "string");
+      const payload = {
+        text: normalizedText || undefined,
+        uploadedAssetIds: uploadedAssetIds.length > 0 ? uploadedAssetIds : undefined,
+      };
       const response = isFulfillingTransfer
         ? await fetch(`/api/transfers/${requestedCode}/payload`, {
             method: "POST",
@@ -354,10 +387,7 @@ function SendPageContent({
               "content-type": "application/json",
             },
             body: JSON.stringify({
-              payload: {
-                text: normalizedText || undefined,
-                uploadedAssetIds,
-              },
+              payload,
             }),
           })
         : await fetch("/api/transfers", {
@@ -366,10 +396,7 @@ function SendPageContent({
               "content-type": "application/json",
             },
             body: JSON.stringify({
-              payload: {
-                text: normalizedText || undefined,
-                uploadedAssetIds,
-              },
+              payload,
             }),
           });
 
@@ -501,9 +528,17 @@ function SendPageContent({
             type="button"
             className="flex h-12 w-full items-center justify-center rounded-xl bg-zinc-900 text-base font-semibold text-white transition hover:bg-zinc-800"
             onClick={submitTransfer}
-            disabled={(!text.trim() && draftAttachments.length === 0) || pending}
+            disabled={
+              (!text.trim() && draftAttachments.length === 0) ||
+              pending ||
+              hasBlockingDraftAttachment
+            }
           >
-            {pending ? "Sending..." : "Send"}
+            {pending
+              ? "Sending..."
+              : hasBlockingDraftAttachment
+                ? "Preparing files..."
+                : "Send"}
           </button>
 
           {errorMessage ? (
