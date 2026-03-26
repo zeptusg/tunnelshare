@@ -10,10 +10,59 @@ import {
   transferActionResponseSchema,
 } from "@/lib/transfer-client";
 
-type UploadStatus = "idle" | "queued" | "uploading" | "uploaded" | "error";
+type DraftAttachmentStatus =
+  | "queued"
+  | "preparing"
+  | "uploading"
+  | "finalizing"
+  | "ready"
+  | "failed"
+  | "canceled"
+  | "removed";
+
+type DraftAttachment = {
+  localId: string;
+  file: File;
+  fileIdentity: string;
+  status: DraftAttachmentStatus;
+  progressPercent: number;
+  storedAssetId?: string;
+  errorMessage?: string;
+};
 
 function getFileIdentity(file: File): string {
   return [file.name, file.size, file.lastModified].join(":");
+}
+
+function createDraftAttachment(file: File): DraftAttachment {
+  return {
+    localId: crypto.randomUUID(),
+    file,
+    fileIdentity: getFileIdentity(file),
+    status: "queued",
+    progressPercent: 0,
+  };
+}
+
+function getDraftAttachmentStatusLabel(attachment: DraftAttachment): string {
+  switch (attachment.status) {
+    case "queued":
+      return "Queued";
+    case "preparing":
+      return "Preparing";
+    case "uploading":
+      return `Uploading ${attachment.progressPercent}%`;
+    case "finalizing":
+      return "Finalizing";
+    case "ready":
+      return "Uploaded";
+    case "failed":
+      return attachment.errorMessage ?? "Upload failed";
+    case "canceled":
+      return "Canceled";
+    case "removed":
+      return "Removed";
+  }
 }
 
 function uploadFileBytesWithProgress(params: {
@@ -101,14 +150,11 @@ function SendPageContent({
 }) {
   const searchParams = useSearchParams();
   const [text, setText] = useState("");
-  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [draftAttachments, setDraftAttachments] = useState<DraftAttachment[]>([]);
   const [transfer, setTransfer] = useState<TransferActionResponse | null>(null);
   const [copied, setCopied] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
-  const [uploadProgressByFile, setUploadProgressByFile] = useState<
-    Record<string, { progressPercent: number; status: UploadStatus }>
-  >({});
   const requestedCode = searchParams.get("code")?.trim().toUpperCase() ?? "";
   const isFulfillingTransfer = requestedCode.length > 0;
 
@@ -118,31 +164,28 @@ function SendPageContent({
     setErrorMessage(null);
   }, [requestedCode]);
 
-  function updateUploadProgress(
-    fileIdentity: string,
-    nextState: { progressPercent?: number; status?: UploadStatus }
+  function updateDraftAttachment(
+    localId: string,
+    nextState: Partial<DraftAttachment>
   ): void {
-    setUploadProgressByFile((currentState) => {
-      const previousState = currentState[fileIdentity] ?? {
-        progressPercent: 0,
-        status: "idle" as UploadStatus,
-      };
-
-      return {
-        ...currentState,
-        [fileIdentity]: {
-          progressPercent:
-            nextState.progressPercent ?? previousState.progressPercent,
-          status: nextState.status ?? previousState.status,
-        },
-      };
-    });
+    setDraftAttachments((currentAttachments) =>
+      currentAttachments.map((attachment) =>
+        attachment.localId === localId
+          ? {
+              ...attachment,
+              ...nextState,
+            }
+          : attachment
+      )
+    );
   }
 
   function addSelectedFiles(nextFiles: File[]): void {
-    setSelectedFiles((currentFiles) => {
-      const mergedFiles = [...currentFiles];
-      const seenFiles = new Set(currentFiles.map(getFileIdentity));
+    setDraftAttachments((currentAttachments) => {
+      const mergedAttachments = [...currentAttachments];
+      const seenFiles = new Set(
+        currentAttachments.map((attachment) => attachment.fileIdentity)
+      );
 
       for (const nextFile of nextFiles) {
         const fileIdentity = getFileIdentity(nextFile);
@@ -151,42 +194,40 @@ function SendPageContent({
         }
 
         seenFiles.add(fileIdentity);
-        mergedFiles.push(nextFile);
+        mergedAttachments.push(createDraftAttachment(nextFile));
       }
 
-      if (mergedFiles.length > maxUploadFiles) {
+      if (mergedAttachments.length > maxUploadFiles) {
         setErrorMessage(`Add up to ${maxUploadFiles} files per transfer.`);
-        return mergedFiles.slice(0, maxUploadFiles);
+        return mergedAttachments.slice(0, maxUploadFiles);
       }
 
       setErrorMessage(null);
 
-      return mergedFiles;
+      return mergedAttachments;
     });
   }
 
-  function removeSelectedFile(fileToRemove: File): void {
-    const fileIdentityToRemove = getFileIdentity(fileToRemove);
-    setUploadProgressByFile((currentState) => {
-      const remainingState = { ...currentState };
-      delete remainingState[fileIdentityToRemove];
-      return remainingState;
-    });
-    setSelectedFiles((currentFiles) =>
-      currentFiles.filter(
-        (currentFile) => getFileIdentity(currentFile) !== fileIdentityToRemove
-      )
+  function removeDraftAttachment(localId: string): void {
+    setDraftAttachments((currentAttachments) =>
+      currentAttachments.filter((attachment) => attachment.localId !== localId)
     );
   }
 
   async function uploadSelectedFiles(): Promise<string[]> {
     const uploadedAssetIds: string[] = [];
 
-    for (const selectedFile of selectedFiles) {
-      const fileIdentity = getFileIdentity(selectedFile);
-      updateUploadProgress(fileIdentity, {
+    for (const attachment of draftAttachments) {
+      const selectedFile = attachment.file;
+      updateDraftAttachment(attachment.localId, {
         progressPercent: 0,
         status: "queued",
+        errorMessage: undefined,
+        storedAssetId: undefined,
+      });
+
+      updateDraftAttachment(attachment.localId, {
+        status: "preparing",
       });
 
       const createUploadResponse = await fetch("/api/uploads", {
@@ -205,22 +246,29 @@ function SendPageContent({
 
       const uploadTargetPayload: unknown = await createUploadResponse.json();
       if (!createUploadResponse.ok) {
-        throw new Error(
-          getUploadErrorMessage(
+        updateDraftAttachment(attachment.localId, {
+          status: "failed",
+          errorMessage: getUploadErrorMessage(
             uploadTargetPayload,
             selectedFile.name,
             maxUploadFileBytes
-          )
+          ),
+        });
+        throw new Error(
+          getUploadErrorMessage(uploadTargetPayload, selectedFile.name, maxUploadFileBytes)
         );
       }
 
       const uploadTargetResult = uploadTargetSchema.safeParse(uploadTargetPayload);
       if (!uploadTargetResult.success) {
-        updateUploadProgress(fileIdentity, { status: "error" });
+        updateDraftAttachment(attachment.localId, {
+          status: "failed",
+          errorMessage: "Received an invalid upload target.",
+        });
         throw new Error("Received an invalid upload target.");
       }
 
-      updateUploadProgress(fileIdentity, {
+      updateDraftAttachment(attachment.localId, {
         progressPercent: 0,
         status: "uploading",
       });
@@ -233,38 +281,54 @@ function SendPageContent({
           headers: uploadTargetResult.data.headers,
           file: selectedFile,
           onProgress: (progressPercent) => {
-            updateUploadProgress(fileIdentity, {
+            updateDraftAttachment(attachment.localId, {
               progressPercent,
               status: "uploading",
             });
           },
         });
       } catch (error) {
-        updateUploadProgress(fileIdentity, { status: "error" });
+        updateDraftAttachment(attachment.localId, {
+          status: "failed",
+          errorMessage:
+            error instanceof Error
+              ? error.message
+              : `Could not upload ${selectedFile.name}. Please try again.`,
+        });
         throw error;
       }
 
       // Uploading bytes and finalizing the stored asset are separate steps so
       // the same client flow works for local storage and signed cloud uploads.
+      updateDraftAttachment(attachment.localId, {
+        status: "finalizing",
+      });
       const finalizeUploadResponse = await fetch(uploadTargetResult.data.completeUrl, {
         method: "POST",
       });
 
       storedAssetPayload = await finalizeUploadResponse.json();
       if (!finalizeUploadResponse.ok) {
-        updateUploadProgress(fileIdentity, { status: "error" });
+        updateDraftAttachment(attachment.localId, {
+          status: "failed",
+          errorMessage: `Could not finalize ${selectedFile.name}. Please try again.`,
+        });
         throw new Error(`Could not finalize ${selectedFile.name}. Please try again.`);
       }
 
       const storedAssetResult = storedFileAssetSchema.safeParse(storedAssetPayload);
       if (!storedAssetResult.success) {
-        updateUploadProgress(fileIdentity, { status: "error" });
+        updateDraftAttachment(attachment.localId, {
+          status: "failed",
+          errorMessage: "Received an invalid stored file asset.",
+        });
         throw new Error("Received an invalid stored file asset.");
       }
 
-      updateUploadProgress(fileIdentity, {
+      updateDraftAttachment(attachment.localId, {
         progressPercent: 100,
-        status: "uploaded",
+        status: "ready",
+        storedAssetId: storedAssetResult.data.id,
       });
       uploadedAssetIds.push(storedAssetResult.data.id);
     }
@@ -274,7 +338,7 @@ function SendPageContent({
 
   async function submitTransfer(): Promise<void> {
     const normalizedText = text.trim();
-    if (!normalizedText && selectedFiles.length === 0) {
+    if (!normalizedText && draftAttachments.length === 0) {
       return;
     }
 
@@ -282,7 +346,7 @@ function SendPageContent({
       setPending(true);
       setErrorMessage(null);
       const uploadedAssetIds =
-        selectedFiles.length > 0 ? await uploadSelectedFiles() : undefined;
+        draftAttachments.length > 0 ? await uploadSelectedFiles() : undefined;
       const response = isFulfillingTransfer
         ? await fetch(`/api/transfers/${requestedCode}/payload`, {
             method: "POST",
@@ -387,62 +451,42 @@ function SendPageContent({
               Add up to {maxUploadFiles} files, with{" "}
               {formatUploadSizeLabel(maxUploadFileBytes)} per file.
             </p>
-            {selectedFiles.length > 0 ? (
+            {draftAttachments.length > 0 ? (
               <div className="mt-3 space-y-2">
-                {selectedFiles.map((selectedFile) => (
+                {draftAttachments.map((attachment) => (
                   <div
-                    key={getFileIdentity(selectedFile)}
+                    key={attachment.localId}
                     className="rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2"
                   >
                     <div className="flex items-center justify-between gap-3">
                       <div className="min-w-0 flex-1">
                         <p className="truncate pr-3 text-sm text-zinc-700">
-                          {selectedFile.name}
+                          {attachment.file.name}
                         </p>
-                        {uploadProgressByFile[getFileIdentity(selectedFile)] ? (
-                          <p className="mt-1 text-xs text-zinc-500">
-                            {uploadProgressByFile[getFileIdentity(selectedFile)]
-                              .status === "queued"
-                              ? "Queued"
-                              : uploadProgressByFile[getFileIdentity(selectedFile)]
-                                    .status === "uploading"
-                                ? `Uploading ${uploadProgressByFile[getFileIdentity(selectedFile)].progressPercent}%`
-                                : uploadProgressByFile[getFileIdentity(selectedFile)]
-                                      .status === "uploaded"
-                                  ? "Uploaded"
-                                  : "Upload failed"}
-                          </p>
-                        ) : null}
+                        <p className="mt-1 text-xs text-zinc-500">
+                          {getDraftAttachmentStatusLabel(attachment)}
+                        </p>
                       </div>
-                    <button
-                      type="button"
-                      onClick={() => removeSelectedFile(selectedFile)}
-                      className="rounded-md border border-zinc-300 bg-white px-2 py-1 text-xs font-medium text-zinc-700 transition hover:bg-zinc-100"
-                      aria-label={`Remove ${selectedFile.name}`}
-                      disabled={pending}
-                    >
-                      Remove
-                    </button>
+                      <button
+                        type="button"
+                        onClick={() => removeDraftAttachment(attachment.localId)}
+                        className="rounded-md border border-zinc-300 bg-white px-2 py-1 text-xs font-medium text-zinc-700 transition hover:bg-zinc-100"
+                        aria-label={`Remove ${attachment.file.name}`}
+                        disabled={pending}
+                      >
+                        Remove
+                      </button>
                     </div>
-                    {uploadProgressByFile[getFileIdentity(selectedFile)] &&
-                    uploadProgressByFile[getFileIdentity(selectedFile)].status !==
-                      "idle" ? (
+                    {attachment.status !== "removed" ? (
                       <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-zinc-200">
                         <div
                           className={`h-full rounded-full transition-all ${
-                            uploadProgressByFile[getFileIdentity(selectedFile)]
-                              .status === "error"
+                            attachment.status === "failed"
                               ? "bg-red-500"
                               : "bg-zinc-900"
                           }`}
                           style={{
-                            width: `${
-                              uploadProgressByFile[getFileIdentity(selectedFile)]
-                                .status === "error"
-                                ? 100
-                                : uploadProgressByFile[getFileIdentity(selectedFile)]
-                                    .progressPercent
-                            }%`,
+                            width: `${attachment.status === "failed" ? 100 : attachment.progressPercent}%`,
                           }}
                         />
                       </div>
@@ -457,7 +501,7 @@ function SendPageContent({
             type="button"
             className="flex h-12 w-full items-center justify-center rounded-xl bg-zinc-900 text-base font-semibold text-white transition hover:bg-zinc-800"
             onClick={submitTransfer}
-            disabled={(!text.trim() && selectedFiles.length === 0) || pending}
+            disabled={(!text.trim() && draftAttachments.length === 0) || pending}
           >
             {pending ? "Sending..." : "Send"}
           </button>
