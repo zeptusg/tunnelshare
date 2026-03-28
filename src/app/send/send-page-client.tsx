@@ -198,6 +198,9 @@ function SendPageContent({
   const [copied, setCopied] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
+  const [pickerBusy, setPickerBusy] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const pickerOpenedAtRef = useRef<number | null>(null);
   const inFlightUploadIdsRef = useRef(new Set<string>());
   const uploadControlsByIdRef = useRef<Record<string, DraftAttachmentUploadControls>>({});
   const requestedCode = searchParams.get("code")?.trim().toUpperCase() ?? "";
@@ -211,6 +214,29 @@ function SendPageContent({
     setCopied(false);
     setErrorMessage(null);
   }, [requestedCode]);
+
+  useEffect(() => {
+    function handleWindowFocus(): void {
+      if (pickerOpenedAtRef.current === null) {
+        return;
+      }
+
+      window.setTimeout(() => {
+        if (pickerOpenedAtRef.current === null) {
+          return;
+        }
+
+        pickerOpenedAtRef.current = null;
+        setPickerBusy(false);
+      }, 0);
+    }
+
+    window.addEventListener("focus", handleWindowFocus);
+
+    return () => {
+      window.removeEventListener("focus", handleWindowFocus);
+    };
+  }, []);
 
   function updateDraftAttachment(
     localId: string,
@@ -572,6 +598,18 @@ function SendPageContent({
     }
   }
 
+  function openFilePicker(): void {
+    const fileInput = fileInputRef.current;
+    if (!fileInput) {
+      return;
+    }
+
+    pickerOpenedAtRef.current = performance.now();
+    setPickerBusy(true);
+    fileInput.value = "";
+    fileInput.click();
+  }
+
   return (
     <main className="flex min-h-screen items-center justify-center bg-zinc-100 px-4 py-8">
       <section className="w-full max-w-lg rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm sm:p-8">
@@ -597,20 +635,36 @@ function SendPageContent({
 
           <div>
             <input
+              ref={fileInputRef}
               type="file"
               multiple
               onChange={(event) => {
                 const nextFiles = Array.from(event.target.files ?? []);
+                pickerOpenedAtRef.current = null;
+                setPickerBusy(false);
                 addSelectedFiles(nextFiles);
                 event.target.value = "";
               }}
-              className="block w-full text-sm text-zinc-700 file:mr-4 file:rounded-lg file:border-0 file:bg-zinc-900 file:px-3 file:py-2 file:text-sm file:font-medium file:text-white hover:file:bg-zinc-800"
+              className="sr-only"
               aria-label="Select file"
             />
+            <button
+              type="button"
+              onClick={openFilePicker}
+              className="inline-flex h-10 items-center justify-center rounded-lg bg-zinc-900 px-4 text-sm font-medium text-white transition hover:bg-zinc-800 disabled:cursor-not-allowed disabled:bg-zinc-400"
+              disabled={pending || pickerBusy}
+            >
+              {pickerBusy ? "Opening file picker..." : "Choose files"}
+            </button>
             <p className="mt-2 text-xs text-zinc-500">
               Add up to {maxUploadFiles} files, with{" "}
               {formatUploadSizeLabel(maxUploadFileBytes)} per file.
             </p>
+            {pickerBusy ? (
+              <p className="mt-2 text-xs text-zinc-500">
+                Big files take time to get rejected.
+              </p>
+            ) : null}
             {draftAttachments.length > 0 ? (
               <div className="mt-3 space-y-2">
                 {draftAttachments.map((attachment) => (
