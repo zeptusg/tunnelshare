@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { createFileStore } from "@/server/file-store-factory";
+import { getStoredTransfer, getTransferCodeByAssetId } from "@/server/transfer-store";
+import { isTransferAvailable } from "@/server/transfers";
+import { transferSchema } from "@/lib/types";
 
 const normalizedAssetIdSchema = z.string().uuid("assetId must be a valid UUID");
 const dispositionSchema = z.enum(["attachment", "inline"]).catch("attachment");
@@ -29,6 +32,27 @@ export async function GET(
     }
 
     try {
+      const transferCode = await getTransferCodeByAssetId(assetIdResult.data);
+
+      if (!transferCode) {
+        return NextResponse.json({ error: "not_found" }, { status: 404 });
+      }
+
+      const transferFromStore = await getStoredTransfer(transferCode);
+      const transferResult = transferSchema.safeParse(transferFromStore);
+
+      if (!transferResult.success || !isTransferAvailable(transferResult.data)) {
+        return NextResponse.json({ error: "not_found" }, { status: 404 });
+      }
+
+      const fileIsReferencedByTransfer = (transferResult.data.payload?.files ?? []).some(
+        (file) => file.id === assetIdResult.data
+      );
+
+      if (!fileIsReferencedByTransfer) {
+        return NextResponse.json({ error: "not_found" }, { status: 404 });
+      }
+
       const asset = await fileStore.getStoredFileAsset({
         assetId: assetIdResult.data,
       });

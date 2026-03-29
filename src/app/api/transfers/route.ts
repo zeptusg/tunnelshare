@@ -3,7 +3,10 @@ import { z } from "zod";
 import { generateCode } from "@/lib/code";
 import { config } from "@/lib/config";
 import { createFileStore } from "@/server/file-store-factory";
-import { saveTransfer } from "@/server/transfer-store";
+import {
+  saveTransfer,
+  saveTransferFileReference,
+} from "@/server/transfer-store";
 import {
   resolveTransferPayload,
   transferPayloadInputSchema,
@@ -11,6 +14,7 @@ import {
 import {
   createAwaitingTransfer,
   createReadyTransfer,
+  getRemainingTransferTtlSeconds,
 } from "@/server/transfers";
 
 const createTransferResponseSchema = z.object({
@@ -80,8 +84,15 @@ export async function POST(
         receiveUrl,
         payload: resolvedPayload,
       });
+      const transferTtlSeconds = getRemainingTransferTtlSeconds(transfer);
+      const transferFiles = transfer.payload?.files ?? [];
 
-      await saveTransfer(transfer, config.sessionTtlSeconds);
+      await saveTransfer(transfer, transferTtlSeconds);
+      await Promise.all(
+        transferFiles.map((file) =>
+          saveTransferFileReference(file.id, transfer.code, transferTtlSeconds)
+        )
+      );
 
       return NextResponse.json<CreateTransferResponse>(
         createTransferResponseSchema.parse({

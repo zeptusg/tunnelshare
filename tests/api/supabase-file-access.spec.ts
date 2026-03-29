@@ -49,6 +49,15 @@ test("supabase upload target accepts bytes and finalizes a stored asset", async 
     storageKey: uploadTarget.storageKey,
   });
 
+  const transferCreateResponse = await request.post("/api/transfers", {
+    data: {
+      payload: {
+        uploadedAssetIds: [storedAsset.id],
+      },
+    },
+  });
+  expect(transferCreateResponse.status()).toBe(201);
+
   const fileRouteResponse = await request.get(`/api/files/${storedAsset.id}`, {
   });
   expect(fileRouteResponse.status()).toBe(200);

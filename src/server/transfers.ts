@@ -137,6 +137,18 @@ export function isTransferAvailable(
   return transfer.status === "awaiting_payload" || transfer.status === "ready";
 }
 
+export function getRemainingTransferTtlSeconds(
+  transfer: Transfer,
+  now: Date = new Date()
+): number {
+  const expiresAtMs = Date.parse(transfer.expiresAt);
+  if (Number.isNaN(expiresAtMs)) {
+    return 0;
+  }
+
+  return Math.max(0, Math.ceil((expiresAtMs - now.getTime()) / 1000));
+}
+
 export function toPublicTransfer(transfer: Transfer): PublicTransfer {
   const { code, status, payload, sendUrl, expiresAt } = transfer;
   return publicTransferSchema.parse({

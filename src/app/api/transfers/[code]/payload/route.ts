@@ -3,13 +3,18 @@ import { z } from "zod";
 import { config } from "@/lib/config";
 import { transferSchema } from "@/lib/types";
 import { createFileStore } from "@/server/file-store-factory";
-import { getStoredTransfer, saveTransfer } from "@/server/transfer-store";
+import {
+  getStoredTransfer,
+  saveTransfer,
+  saveTransferFileReference,
+} from "@/server/transfer-store";
 import {
   resolveTransferPayload,
   transferPayloadInputSchema,
 } from "@/server/transfer-payloads";
 import {
   fulfillTransferWithPayload,
+  getRemainingTransferTtlSeconds,
   isTransferExpired,
 } from "@/server/transfers";
 
@@ -102,8 +107,19 @@ export async function POST(
       transfer: transferResult.data,
       payload: resolvedPayload,
     });
+    const transferTtlSeconds = getRemainingTransferTtlSeconds(fulfilledTransfer);
+    const transferFiles = fulfilledTransfer.payload?.files ?? [];
 
-    await saveTransfer(fulfilledTransfer, config.sessionTtlSeconds);
+    await saveTransfer(fulfilledTransfer, transferTtlSeconds);
+    await Promise.all(
+      transferFiles.map((file) =>
+        saveTransferFileReference(
+          file.id,
+          fulfilledTransfer.code,
+          transferTtlSeconds
+        )
+      )
+    );
 
     return NextResponse.json<FulfillTransferResponse>(
       fulfillTransferResponseSchema.parse({

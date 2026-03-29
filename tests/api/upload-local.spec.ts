@@ -56,6 +56,15 @@ test("local upload target accepts bytes and returns stored file asset", async ({
     storageKey: uploadTarget.storageKey,
   });
 
+  const transferCreateResponse = await request.post("/api/transfers", {
+    data: {
+      payload: {
+        uploadedAssetIds: [storedAsset.id],
+      },
+    },
+  });
+  expect(transferCreateResponse.status()).toBe(201);
+
   const downloadResponse = await request.get(`/api/files/${storedAsset.id}`);
   expect(downloadResponse.status()).toBe(200);
   expect(downloadResponse.headers()["content-disposition"]).toContain(
