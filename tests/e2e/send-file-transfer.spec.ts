@@ -41,3 +41,30 @@ test('oversized file is rejected before entering the sender draft list', async (
     await expect(page.getByRole('button', { name: /retry too-large\.bin/i })).toHaveCount(0);
     await expect(page.getByRole('button', { name: /^send$/i })).toBeDisabled();
 });
+
+test('removing a file during pre-upload cancels it and keeps it out of the draft', async ({
+    page,
+}) => {
+    await page.route('**/api/uploads', async (route) => {
+        await page.waitForTimeout(2000);
+        await route.continue();
+    });
+
+    await page.goto('/send');
+
+    await page.getByLabel(/select file/i).setInputFiles({
+        name: 'cancel-me.txt',
+        mimeType: 'text/plain',
+        buffer: Buffer.from('cancel this upload'),
+    });
+
+    await expect(page.getByText('cancel-me.txt')).toBeVisible();
+    await expect(page.getByText(/preparing upload\.\.\./i)).toBeVisible();
+
+    await page.getByRole('button', { name: /remove cancel-me\.txt/i }).click();
+
+    await expect(page.getByText('cancel-me.txt')).toHaveCount(0);
+    await page.waitForTimeout(2500);
+    await expect(page.getByText('cancel-me.txt')).toHaveCount(0);
+    await expect(page.getByRole('button', { name: /^send$/i })).toBeDisabled();
+});
