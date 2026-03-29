@@ -126,6 +126,17 @@ export function isTransferExpired(
   return now.getTime() >= expiresAtMs;
 }
 
+export function isTransferAvailable(
+  transfer: Transfer,
+  now: Date = new Date()
+): boolean {
+  if (isTransferExpired(transfer, now)) {
+    return false;
+  }
+
+  return transfer.status === "awaiting_payload" || transfer.status === "ready";
+}
+
 export function toPublicTransfer(transfer: Transfer): PublicTransfer {
   const { code, status, payload, sendUrl, expiresAt } = transfer;
   return publicTransferSchema.parse({

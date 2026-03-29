@@ -3,7 +3,7 @@ import { z } from "zod";
 import { transferSchema } from "@/lib/types";
 import type { PublicTransfer } from "@/lib/types";
 import { getStoredTransfer } from "@/server/transfer-store";
-import { isTransferExpired, toPublicTransfer } from "@/server/transfers";
+import { isTransferAvailable, toPublicTransfer } from "@/server/transfers";
 
 export const dynamic = "force-dynamic";
 
@@ -37,7 +37,7 @@ export async function GET(
     }
 
     const transferResult = transferSchema.safeParse(transferFromStore);
-    if (!transferResult.success || isTransferExpired(transferResult.data)) {
+    if (!transferResult.success || !isTransferAvailable(transferResult.data)) {
       return NextResponse.json(NOT_FOUND_RESPONSE, { status: 404 });
     }
 
