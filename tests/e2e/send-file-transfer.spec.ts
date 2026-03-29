@@ -68,3 +68,42 @@ test('removing a file during pre-upload cancels it and keeps it out of the draft
     await expect(page.getByText('cancel-me.txt')).toHaveCount(0);
     await expect(page.getByRole('button', { name: /^send$/i })).toBeDisabled();
 });
+
+test('failed pre-upload can be retried and then succeeds', async ({ page }) => {
+    let shouldFailCreateUpload = true;
+
+    await page.route('**/api/uploads', async (route) => {
+        if (route.request().method() === 'POST' && shouldFailCreateUpload) {
+            shouldFailCreateUpload = false;
+            await route.fulfill({
+                status: 500,
+                contentType: 'application/json',
+                body: JSON.stringify({ error: 'internal_error' }),
+            });
+            return;
+        }
+
+        await route.continue();
+    });
+
+    await page.goto('/send');
+
+    await page.getByLabel(/select file/i).setInputFiles({
+        name: 'retry-me.txt',
+        mimeType: 'text/plain',
+        buffer: Buffer.from('retry upload'),
+    });
+
+    await expect(page.getByText('retry-me.txt', { exact: true })).toBeVisible();
+    await expect(page.getByText(/could not prepare retry-me\.txt for upload\. please try again\./i)).toBeVisible();
+    await expect(page.getByRole('button', { name: /retry retry-me\.txt/i })).toBeVisible();
+
+    await page.getByRole('button', { name: /retry retry-me\.txt/i }).click();
+
+    const retryFileRow = page.locator('div.rounded-lg').filter({
+        has: page.getByText('retry-me.txt'),
+    });
+    await expect(retryFileRow.getByText(/^Uploaded$/i)).toBeVisible();
+    await expect(page.getByRole('button', { name: /retry retry-me\.txt/i })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: /^send$/i })).toBeEnabled();
+});
