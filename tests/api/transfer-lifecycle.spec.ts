@@ -10,7 +10,7 @@ import {
   saveTransfer,
   saveTransferFileReference,
 } from "@/server/transfer-store";
-import { createReadyTransfer } from "@/server/transfers";
+import { createAwaitingTransfer, createReadyTransfer } from "@/server/transfers";
 
 async function createStoredTextAsset(
   request: APIRequestContext,
@@ -165,6 +165,37 @@ test("expired transfers and their files are unavailable even if records still ex
   const fileResponse = await request.get(`/api/files/${storedAsset.id}`);
   expect(fileResponse.status()).toBe(404);
   await expect(fileResponse.json()).resolves.toMatchObject({
+    error: "not_found",
+  });
+});
+
+test("fulfilling a transfer after its expiry window returns not_found instead of failing", async ({
+  request,
+}) => {
+  const code = generateCode();
+  const receiveUrl = new URL(`/receive/${code}`, config.appUrl).toString();
+  const sendUrl = new URL(`/send?code=${code}`, config.appUrl).toString();
+
+  const expiredAwaitingTransfer = createAwaitingTransfer({
+    code,
+    ttlSeconds: 60,
+    receiveUrl,
+    sendUrl,
+    now: new Date(Date.now() - 2 * 60 * 1000),
+  });
+
+  await saveTransfer(expiredAwaitingTransfer, 60);
+
+  const fulfillResponse = await request.post(`/api/transfers/${code}/payload`, {
+    data: {
+      payload: {
+        text: "too late",
+      },
+    },
+  });
+
+  expect(fulfillResponse.status()).toBe(404);
+  await expect(fulfillResponse.json()).resolves.toMatchObject({
     error: "not_found",
   });
 });

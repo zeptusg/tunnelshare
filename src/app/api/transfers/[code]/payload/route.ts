@@ -110,6 +110,10 @@ export async function POST(
     const transferTtlSeconds = getRemainingTransferTtlSeconds(fulfilledTransfer);
     const transferFiles = fulfilledTransfer.payload?.files ?? [];
 
+    if (transferTtlSeconds <= 0) {
+      return NextResponse.json(NOT_FOUND_RESPONSE, { status: 404 });
+    }
+
     await saveTransfer(fulfilledTransfer, transferTtlSeconds);
     await Promise.all(
       transferFiles.map((file) =>
